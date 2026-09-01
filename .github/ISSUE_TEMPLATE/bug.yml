@@ -1,0 +1,24 @@
+name: 不具合
+description: 再現可能な不具合を修正するためのIssue
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 再現手順
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待した結果と実際の結果
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 修正境界と再発防止の確認方法
+    validations:
+      required: true
+

@@ -1,0 +1,41 @@
+name: 機能
+description: 利用者価値を小さく実装するためのIssue
+title: "[Feature] "
+labels: [feature]
+body:
+  - type: textarea
+    id: value
+    attributes:
+      label: 利用者価値
+      description: 「誰が、何をできる」の形で記述する。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受入条件
+      description: 観測・テスト可能な条件を2〜5個、Given / When / Thenで記述する。
+      placeholder: |
+        - Given ..., When ..., Then ...
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: 変更境界
+      description: 変更してよい画面・層・DB・テストを記述する。
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: 非対象
+      description: 今回実装しないことを記述する。
+  - type: textarea
+    id: verification
+    attributes:
+      label: 検証方法
+      description: 自動テスト名または手動確認手順を記述する。
+    validations:
+      required: true
+
