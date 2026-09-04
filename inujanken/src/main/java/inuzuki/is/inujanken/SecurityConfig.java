@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Spring Security の新しい設定方式（WebSecurityConfigurerAdapter 非推奨/削除対応）。
- * - in-memory にユーザを登録（yamada / taro）
+ * - in-memory にユーザを登録（yamada / taro、kodai / taro、oit / hanako）
  * - BCrypt を使ってパスワードをエンコード
  * - デフォルトのログインページを使用
  */
@@ -29,11 +29,19 @@ public class SecurityConfig {
 
   @Bean
   public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-    UserDetails user = User.withUsername("yamada")
+    UserDetails yamada = User.withUsername("yamada")
         .password(passwordEncoder.encode("taro"))
         .roles("USER")
         .build();
-    return new InMemoryUserDetailsManager(user);
+    UserDetails kodai = User.withUsername("kodai")
+        .password(passwordEncoder.encode("taro"))
+        .roles("USER")
+        .build();
+    UserDetails oit = User.withUsername("oit")
+        .password(passwordEncoder.encode("hanako"))
+        .roles("USER")
+        .build();
+    return new InMemoryUserDetailsManager(yamada, kodai, oit);
   }
 
   @Bean
