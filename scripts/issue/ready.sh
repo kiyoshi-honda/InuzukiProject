@@ -4,11 +4,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../lib/course-env.sh"
 
 is_executable() {
-  local number="$1" state blockers
-  state="$(gh issue view "$number" --json state --jq '.state')"
-  # GitHub CLIの版によっては、--json blockedBy の結果が
-  # {"blockedBy": [...]} ではなく配列 [...] として渡される。
-  blockers="$(gh issue view "$number" --json blockedBy --jq 'if type == "array" then [.[] | select(.state != "CLOSED")] | length else [.blockedBy[]? | select(.state != "CLOSED")] | length end')"
+  local number="$1" state_json blockers_json state blockers
+  # GitHub CLIの版によっては --json <項目> に対する --jq の入力が
+  # オブジェクトではなく配列になる。そのため--jqを使わず、生のJSONを調べる。
+  state_json="$(gh issue view "$number" --json state)"
+  if printf '%s\n' "$state_json" | grep -Eq '"state"[[:space:]]*:[[:space:]]*"OPEN"|"OPEN"'; then
+    state="OPEN"
+  else
+    state="OTHER"
+  fi
+  blockers_json="$(gh issue view "$number" --json blockedBy)"
+  blockers="$(printf '%s\n' "$blockers_json" | grep -Eo '"state"[[:space:]]*:[[:space:]]*"(OPEN|CLOSED)"' | grep -vc '"CLOSED"' || true)"
   [[ "$state" == "OPEN" && "$blockers" == "0" ]]
 }
 
