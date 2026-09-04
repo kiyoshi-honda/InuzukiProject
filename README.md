@@ -25,11 +25,7 @@
 
 ### 0-1. PortableGit Bashを開く
 
-WindowsのPowerShellではなく、次を起動します。
-
-```text
-C:\oit\isdev26-byod\PortableGit-2.55.0.3-64\bin\bash.exe
-```
+WindowsのPowerShellではなく、演習環境で設定済みのPortableGit Bashを開きます。エクスプローラーでcloneした `InuzukiProject` フォルダを開き、そのフォルダでPortableGit Bashを起動してください。
 
 演習用JDK・Gradle・GitHub CLIのPATH設定はPortableGit Bashの起動時に自動で行われます。手動で `JAVA_HOME` や `PATH` を設定しません。次を入力し、`25.0.4`、`Gradle 9.7.0`、`gh version` が表示されることを確認します。
 
@@ -77,8 +73,10 @@ gh api user --jq .login
 
 学生が作業を始める前に、演習環境・instructions・scriptsがコミット済みであることを確認します。
 
+PortableGit Bashをリポジトリ直下で開いた場合は、そのまま次を入力します。リポジトリ内のサブフォルダで開いた場合は、最初のコマンドで現在位置からリポジトリ直下へ移動します。
+
 ```bash
-cd /c/Users/Hiroshi/oithomes/isdev/kadai/isdev26/InuzukiProject
+cd "$(git rev-parse --show-toplevel)"
 git status
 ```
 

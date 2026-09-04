@@ -6,7 +6,9 @@ source "${SCRIPT_DIR}/../lib/course-env.sh"
 is_executable() {
   local number="$1" state blockers
   state="$(gh issue view "$number" --json state --jq '.state')"
-  blockers="$(gh issue view "$number" --json blockedBy --jq '[.blockedBy[] | select(.state != "CLOSED")] | length')"
+  # GitHub CLIの版によっては、--json blockedBy の結果が
+  # {"blockedBy": [...]} ではなく配列 [...] として渡される。
+  blockers="$(gh issue view "$number" --json blockedBy --jq 'if type == "array" then [.[] | select(.state != "CLOSED")] | length else [.blockedBy[]? | select(.state != "CLOSED")] | length end')"
   [[ "$state" == "OPEN" && "$blockers" == "0" ]]
 }
 
