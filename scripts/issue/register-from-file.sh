@@ -102,7 +102,7 @@ read -r -p "この内容で新規Issueを登録し、依存関係を設定しま
 
 for index in "${!IDS[@]}"; do
   [[ "${ACTIONS[$index]}" == "新規登録" ]] || continue
-  url="$(gh issue create --title "${TITLES[$index]}" --body-file "${BODY_FILES[$index]}" --assignee "${ASSIGNEES[$index]}" --label feature)"
+  url="$(gh issue create --title "${TITLES[$index]}" --body-file "${BODY_FILES[$index]}" --assignee "${ASSIGNEES[$index]}")"
   number="${url##*/}"
   [[ "$number" =~ ^[0-9]+$ ]] || { echo "エラー: Issue番号を取得できませんでした: $url" >&2; exit 1; }
   NUMBERS[$index]="$number"; NUMBER_BY_ID[${IDS[$index]}]="$number"
