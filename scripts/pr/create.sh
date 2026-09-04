@@ -12,7 +12,12 @@ if [[ "$BRANCH" =~ ^feat/issue-([0-9]+)- ]]; then
 else
   DEFAULT_ISSUE=""
 fi
-read -r -p "関連Issue番号を入力してください${DEFAULT_ISSUE:+ [${DEFAULT_ISSUE]} }: " ISSUE_NUMBER
+ISSUE_PROMPT="関連Issue番号を入力してください"
+if [[ -n "$DEFAULT_ISSUE" ]]; then
+  ISSUE_PROMPT+=" [${DEFAULT_ISSUE}]"
+fi
+ISSUE_PROMPT+=": "
+read -r -p "$ISSUE_PROMPT" ISSUE_NUMBER
 ISSUE_NUMBER="${ISSUE_NUMBER:-$DEFAULT_ISSUE}"
 [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]] || { echo "エラー: Issue番号は数字で入力してください。" >&2; exit 1; }
 ISSUE_TITLE="$(gh issue view "$ISSUE_NUMBER" --json title --jq .title)"
