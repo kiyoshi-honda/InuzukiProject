@@ -44,16 +44,24 @@ gh --version
 次を入力します。
 
 ```bash
-gh auth login
+$ gh auth login
 ```
 
 画面の質問には、通常は次を選びます。
 
 ```text
-What account do you want to log into?  GitHub.com
-What is your preferred protocol?       SSH
-Authenticate Git with your GitHub credentials?  Yes
-How would you like to authenticate?    Login with a web browser
+? Where do you use GitHub? GitHub.com
+? What is your preferred protocol for Git operations on this host? SSH
+? Generate a new SSH key to add to your GitHub account? No
+? How would you like to authenticate GitHub CLI? Login with a web browser
+
+! First copy your one-time code: 24ED-D9D4
+Press Enter to open https://github.com/login/device in your browser...
+✓ Authentication complete.
+- gh config set -h github.com git_protocol ssh
+✓ Configured git protocol
+✓ Logged in as ???? <- ここに自分のGitHub名が表示されていればOK>
+! You were already logged in to this account
 ```
 
 表示されたワンタイムコードをブラウザで入力して認可します。成功後、次のように自分のGitHub名が表示されます。
