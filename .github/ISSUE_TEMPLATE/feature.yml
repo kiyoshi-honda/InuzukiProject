@@ -1,41 +1,46 @@
 name: 機能
-description: 利用者価値を小さく実装するためのIssue
+description: 1人が短いPRで実装する利用者価値
 title: "[Feature] "
 labels: [feature]
 body:
   - type: textarea
-    id: value
+    id: field-1
     attributes:
-      label: 利用者価値
-      description: 「誰が、何をできる」の形で記述する。
+      label: 機能の概要
+      description: できるようになることと、今回しないことを記述する。
     validations:
       required: true
   - type: textarea
-    id: acceptance
+    id: field-2
     attributes:
-      label: 受入条件
-      description: 観測・テスト可能な条件を2〜5個、Given / When / Thenで記述する。
-      placeholder: |
-        - Given ..., When ..., Then ...
+      label: DoD（受入条件）
+      description: Given / When / Then形式で、観測・テスト可能な条件を記述する。
     validations:
       required: true
   - type: textarea
-    id: boundary
+    id: field-3
     attributes:
-      label: 変更境界
-      description: 変更してよい画面・層・DB・テストを記述する。
+      label: 関連ファイル・変更境界
+      description: 変更予定のファイルと、変更してはいけない範囲を記述する。
+  - type: textarea
+    id: field-4
+    attributes:
+      label: 実装計画
+      description: 変更予定ファイルと実装順序を記述する。
+  - type: textarea
+    id: field-5
+    attributes:
+      label: DoD確認方法
+      description: DoDごとに、JUnit、MockMvc、画面操作などで何を確認するか記述する。
     validations:
       required: true
   - type: textarea
-    id: out_of_scope
+    id: field-6
     attributes:
-      label: 非対象
-      description: 今回実装しないことを記述する。
-  - type: textarea
-    id: verification
+      label: 変更しないものとリスク
+      description: 変更範囲に含めないものと、注意すべきリスクを記述する。
+  - type: input
+    id: dependencies
     attributes:
-      label: 検証方法
-      description: 自動テスト名または手動確認手順を記述する。
-    validations:
-      required: true
-
+      label: 依存するIssue
+      description: "例: #12。OpenなIssue番号だけを記載する。草案から登録する場合はスクリプトが検査する。"
