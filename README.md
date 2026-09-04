@@ -19,6 +19,7 @@
 以降では「ログイン済み利用者が `/game` を開くと、じゃんけんの手を選ぶ画面が表示される」を例にします。現在の `SecurityConfig.java` は `/` を公開し、それ以外のURLにログインを要求しています。そのため `/game` 用のControllerと画面を追加すれば、未ログイン利用者のログイン画面への遷移は既存設定で実現できます。
 
 この機能を2件のIssueとして記述した完成例は [examples/issues.example.md](examples/issues.example.md) です。
+対応するPull Request本文の完成例は [examples/pull-request.example.md](examples/pull-request.example.md) です。
 
 ## 0. 初回だけ行う準備
 
