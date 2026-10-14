@@ -29,6 +29,7 @@ Thumbs.db
 tmp/
 .tmp/
 docs/temp/
+/docs/ref/springboot_samples/
 *.tmp
 
 # Compiled classes and archives

@@ -2,10 +2,10 @@
 
 # このファイルは scripts/harness/generate-template-harness.sh により生成される。
 
-ISSUE_HEADINGS=( 機能の概要 DoD（受入条件） 関連ファイル・変更境界 実装計画 DoD確認方法 変更しないものとリスク )
-ISSUE_REQUIRED=( 機能の概要 DoD（受入条件） DoD確認方法 )
-PR_HEADINGS=( 関連Issue 変更内容 確認するDoD テストと確認内容 自分の理解とAI利用 )
-PR_REQUIRED=( 関連Issue 変更内容 確認するDoD )
+ISSUE_HEADINGS=( 機能の概要 AC（受け入れ基準） 関連ファイル・変更境界 実装計画 AC確認方法 変更しないものとリスク )
+ISSUE_REQUIRED=( 機能の概要 AC（受け入れ基準） AC確認方法 )
+PR_HEADINGS=( 関連Issue 変更内容 AC確認結果 DoD確認 テストと確認内容 自分の理解とAI利用 )
+PR_REQUIRED=( 関連Issue 変更内容 AC確認結果 DoD確認 )
 
 contains_heading() {
   local sought="$1"; shift

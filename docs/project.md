@@ -29,9 +29,27 @@ PortableGit Bash を起動して開発する。JDK、Gradle、GitHub CLIのPATH�
 
 ## ドキュメント構成
 
-機能単位の仕様はGitHub IssueのDoD、実装済みの振る舞いはテストとマージ済みPRを正本とする。
+機能単位の仕様はGitHub IssueのAC、実装済みの振る舞いはテストとマージ済みPRを正本とする。
 
 同じ原因が2回以上発生した障害を `docs/troubleshooting.md` に記録する。
+
+## 用語と完了の定義
+
+- **AC（Acceptance Criteria／受け入れ基準）**: 個々のIssueで、その機能を受け入れられるかを判定する観測・テスト可能な条件。原則として Given / When / Then 形式で書く。
+- **DoD（Definition of Done／完了の定義）**: すべての実装Issueに共通する、mainへマージして完了扱いにしてよい条件。Issue固有の機能要件は書かない。
+
+### 共通DoD
+
+実装を伴うIssueは、次のすべてを満たしたときに完了とする。
+
+1. Issueに担当者、AC、変更境界、必要な依存Issueが記録されている。
+2. Issueごとのブランチで実装し、mainへ直接コミットしていない。
+3. 実装がIssueの変更境界とACの範囲に収まっている。
+4. すべてのACについて、自動テストまたは手動確認の結果がPRに記録されている。
+5. `inujanken/` で `gradle test` が成功している。
+6. Web画面を変更した場合、`gradle bootRun` による手動確認を行っている。
+7. PRがテンプレートを満たし、関連Issueを正しく参照している。
+8. 実装者以外がACと差分をレビューし、CI成功後にマージしている。
 
 ## おおまかな案の概要
 

@@ -12,8 +12,8 @@ body:
   - type: textarea
     id: field-2
     attributes:
-      label: DoD（受入条件）
-      description: Given / When / Then形式で、観測・テスト可能な条件を記述する。
+      label: AC（受け入れ基準）
+      description: Given / When / Then形式で、観測・テスト可能な受け入れ基準を記述する。
     validations:
       required: true
   - type: textarea
@@ -29,8 +29,8 @@ body:
   - type: textarea
     id: field-5
     attributes:
-      label: DoD確認方法
-      description: DoDごとに、JUnit、MockMvc、画面操作などで何を確認するか記述する。
+      label: AC確認方法
+      description: 各ACを、JUnit、MockMvc、画面操作などでどう確認するか記述する。
     validations:
       required: true
   - type: textarea
