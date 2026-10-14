@@ -1,528 +1,627 @@
-# InuzukiProject
+# InuzukiProject 開発ガイド
 
-4人程度の学生チームが、GitHub Copilotを共同作業者として使い、Spring BootのWebアプリケーションを7週間程度で開発する演習用リポジトリです。このREADMEは、初学者が実際に入力するコマンド、Copilotへの依頼、期待される出力を順番に説明します。
+このリポジトリは、4人程度のチームで Spring Boot とデータベースを使う Web アプリケーションを開発するためのものです。この README は、学生が上から順に読み、チームで実行する手順書です。
 
-## 最初に理解すること
+開発は、次の順番で進めます。
 
-このプロジェクトで「正しい」と判断する根拠は、次の順です。
+1. ブレインストーミング
+2. タスク分割
+3. Issue の作成・登録
+4. 実装と PR 作成
+5. レビューとマージ
+6. デバッグ
 
-1. `docs/project.md`: アプリ全体の目的、範囲、現在の構成、開発環境。
-2. GitHub Issue: 今回の小さな機能、DoD、変更してよいファイル。
-3. テスト: DoDが今も動くことの自動確認。
-4. Pull Request: 誰が何を変え、どう確認したか。
+## 1. 最初に知っておく言葉
 
-`tasks.md`、大きな機能仕様書、実装完了レポートは作成しません。相談・実装・レビューの履歴はIssueとPRに残します。将来の設計にも影響する判断だけは `docs/adr/` に残します。
-- 誰も残さないかもしれない．毎回の振り返り時に学生にどう指示をすれば必要な情報を残させることができるか要検討
+### AC と DoD
 
-## 例として実装する機能
+**AC（Acceptance Criteria、受け入れ基準）**は、ある一つの Issue が「何ができたら受け入れられるか」を表します。例えば、次のように書きます。
 
-以降では「ログイン済み利用者が `/game` を開くと、じゃんけんの手を選ぶ画面が表示される」を例にします。現在の `SecurityConfig.java` は `/` を公開し、それ以外のURLにログインを要求しています。そのため `/game` 用のControllerと画面を追加すれば、未ログイン利用者のログイン画面への遷移は既存設定で実現できます。
+> 参加者が満員のルームを選んで参加しようとしたとき、参加できず、その理由が画面に表示される。
 
-この機能を2件のIssueとして記述した完成例は [examples/issues.example.md](examples/issues.example.md) です。
-対応するPull Request本文の完成例は [examples/pull-request.example.md](examples/pull-request.example.md) です。
+**DoD（Definition of Done、完了の定義）**は、すべての Issue に共通する完了条件です。テスト、必要な動作確認、PR、レビュー、CI などが含まれます。詳しくは `docs/project.md` の「共通 DoD」を確認してください。
 
-## 0. 初回だけ行う準備
+| 確認したいこと | 見る場所 |
+| --- | --- |
+| この機能で何ができればよいか | GitHub Issue の AC |
+| どのファイルを変える予定か | GitHub Issue の「関連ファイル・変更境界」 |
+| チーム共通で終わったといえる条件 | `docs/project.md` の共通 DoD |
+| 実際に何を変え、どう確かめたか | Pull Request、テスト、レビュー、CI |
 
-### 0-1. PortableGit Bashを開く
+> [!WARNING]
+> 実装が終わってから AC を都合よく書き換えてはいけません。要求自体が変わった場合だけ、実装前にチームで相談して AC を更新します。
 
-WindowsのPowerShellではなく、演習環境で設定済みのPortableGit Bashを開きます。エクスプローラーでcloneした `InuzukiProject` フォルダを開き、そのフォルダでPortableGit Bashを起動してください。
+### AI と一緒に開発するためのハーネス
 
-演習用JDK・Gradle・GitHub CLIのPATH設定はPortableGit Bashの起動時に自動で行われます。手動で `JAVA_HOME` や `PATH` を設定しません。次を入力し、`25.0.4`、`Gradle 9.7.0`、`gh version` が表示されることを確認します。
+このプロジェクトでは、AI の回答だけを正解としません。プロンプト、Skill、テンプレート、スクリプト、CI を組み合わせ、必要な確認を抜かしにくくしています。これを**ハーネスエンジニアリング**と呼びます。
+
+| 工程 | ハーネス | 正式に残る記録 |
+| --- | --- | --- |
+| ブレインストーミング | `/brainstorm`、`docs/project.md` | 合意内容の一時ブリーフ `docs/temp/brainstorm/*.md` |
+| タスク分割 | `/plan-issues`、テンプレート制約 | GitHub Issue にする前の `docs/temp/issues.md` は下書き |
+| Issue 登録 | Issue Form、登録スクリプト | GitHub Issue |
+| 実装 | `AGENTS.md`、Copilot instructions、`implement-issue` Skill | コード、テスト、コミット、PR |
+| レビュー | PR テンプレート、CI、`review-issue` Skill | PR 本文、コメント、承認、CI 結果 |
+| デバッグ | `diagnose-failure` Skill、テスト、ログ | 回帰テスト、修正 PR |
+
+`docs/temp/` のファイルは、AI と相談するための下書きであり Git に登録しません。最終的な根拠は Issue、PR、コード、テスト、レビューに残します。
+
+### この README の AI 応答例について
+
+以下の「AI の応答例」は、現在の `inujanken` のコードを読み、各 Prompt／Skill の指示に従って実行した結果の抜粋です。現在の実装には、参加ルーム、開始処理、満室時の処理、およびそれらを確認するテストがあります。そのため、例では次の未実装機能として「対戦開始後に参加者が手を選ぶ」を扱います。
+
+実際の応答は、選んだ Issue、ブランチの差分、テスト結果によって変わります。`（省略）` の部分も、実際には必ず読み、納得できない点を質問してください。
+
+> [!NOTE]
+> 教員向け: この構成は、巨大な仕様書を先に完成させるのではなく、Issue ごとの小さな仕様（AC）を実装・検証・レビューへつなげる軽量な Spec-Driven Development です。テンプレートのルールを変えるときは `docs/template-constraints.md` を先に変更し、`bash scripts/harness/generate-template-harness.sh` で生成物を更新します。
+
+## 2. 開発を始める前の準備
+
+以下はリポジトリのルートで実行します。絶対パスは使いません。
 
 ```bash
+git status
+git remote -v
 java -version
-gradle --version
-gh --version
+gradle -v
+gh auth status
 ```
 
-### 0-2. GitHub CLIへログインする
-
-次を入力します。
+`gh auth status` が失敗した場合は、GitHub CLI にログインします。
 
 ```bash
-$ gh auth login
+gh auth login
 ```
 
-画面の質問には、通常は次を選びます。
-
-```text
-? Where do you use GitHub? GitHub.com
-? What is your preferred protocol for Git operations on this host? SSH
-? Generate a new SSH key to add to your GitHub account? No
-? How would you like to authenticate GitHub CLI? Login with a web browser
-
-! First copy your one-time code: 24ED-D9D4
-Press Enter to open https://github.com/login/device in your browser...
-✓ Authentication complete.
-- gh config set -h github.com git_protocol ssh
-✓ Configured git protocol
-✓ Logged in as ???? <- ここに自分のGitHub名が表示されていればOK>
-! You were already logged in to this account
-```
-
-表示されたワンタイムコードをブラウザで入力して認可します。成功後、次のように自分のGitHub名が表示されます。
-
-```bash
-gh api user --jq .login
-# 例: student-a
-```
-
-トークン、パスワード、ワンタイムコードをIssue、PR、ソースコードに貼り付けてはいけません。
-
-### 0-3. 土台をmainへ確定する（教員または統合担当だけ）
-
-学生が作業を始める前に、演習環境・instructions・scriptsがコミット済みであることを確認します。
-
-PortableGit Bashをリポジトリ直下で開いた場合は、そのまま次を入力します。リポジトリ内のサブフォルダで開いた場合は、最初のコマンドで現在位置からリポジトリ直下へ移動します。
-
-```bash
-cd "$(git rev-parse --show-toplevel)"
-git status
-```
-
-何も変更がなければ、次のように表示されます。
-
-```text
-On branch main
-nothing to commit, working tree clean
-```
-
-この状態を全員の出発点にします。教員・統合担当以外は、共有の土台を直接変更せず、必ずIssue用ブランチを作ります。
-
-## 1. 何を作るかをAIと相談する
-
-### 1-1. 演習開始時のブレーンストーミング
-
-最初の発散的な相談には外部Web AIを利用して構いません。未公開コード、GitHub URL、個人情報、認証情報は入力しません。AIに案を丸投げせず、学生が大まかに考えたテーマを入力し、その案を条件に照らして詳細化させます。次のプロンプトをそのまま使えます。
-
-```text
-学生チームの大まかな案は次のとおりです。
-
-【学生の案】
-（例: サークル活動で、参加者同士が練習試合の組合せと結果を管理できるようにしたい）
-
-この案を別のアプリ案に置き換えず、発展・詳細化してください。
-以下を満たす必要があります。
-- Spring BootとDBを使う。
-- 複数利用者が存在し、利用者間に何らかのインタラクションがある。
-- 掲示板やチャットを主機能にしない。
-- セットアップ手順と、ロール別ユーザマニュアルを用意できる。
-
-対象利用者、中心となる操作、利用者間インタラクション、保存データ、ロール、主要画面を整理してください。
-各条件について、満たす見込み・不足情報・確認質問を表にしてください。
-最初の1週間で動かす最小の縦切りを示し、質問を最大5個示してください。
-コード、DB定義、GitHub Issue本文は出力しないでください。
-```
-
-入力は「技術制約と教育上の制約」、出力は「比較可能な候補表」です。学生が候補を選んだ後だけ、合意結果を `docs/project.md` の「開発するアプリケーションの条件」を満たす形で短く反映します。
-
-### 1-2. 開発途中のブレーンストーミング
-
-VS Codeでこのリポジトリを開き、Copilot Chatから `.github/prompts/brainstorm-next.prompt.md` を選びます。入力は現在のコード、open Issue、最近のPRです。出力は「次週に実装できる最大3件の候補」であり、まだIssueにはしません。
-
-Copilotの出力から学生が1件を選んだら、次の工程へ進みます。候補を採用しなかった理由まで保存する必要はありません。
-
-## 2. 機能案をIssueにする
-
-### 2-1. CopilotとIssue案・実装計画を作る
-
-実体は [.github/prompts/plan-issues.prompt.md](.github/prompts/plan-issues.prompt.md) です。Copilot Chatの入力欄で `/plan-issues` と入力して選び、表示された入力欄に次を入れます。
-
-```text
-ログイン済み利用者がじゃんけん画面を表示できるようにする。
-今回は手の送信、勝敗計算、履歴保存を実装しない。
-```
-
-`/plan-issues` は対話的に進みます。最初の応答では、CopilotはIssueの分割案だけを表で示し、「このIssue分割で各Issueの実装計画を作成しますか？」と質問します。この時点ではファイルを作成しません。
-
-学生全員で分割案、依存関係、今回しないことを確認し、Chatで次のように返します。
-
-```text
-このIssue分割で実装計画を作成してください。
-```
-
-承認後、Copilotは既存コードとテストを確認し、各Issueの実装計画を含む `docs/temp/issues.md` を作成します。`docs/temp/` は `.gitignore` によりGitへ登録されません。出力には、複数Issueのための一意な `id`、重複しない `title`、任意の `assignee`、草案内の `depends-on`、Issue本文、実装計画が含まれます。
-
-この例のために、作成されたファイルを表示します。
-
-```bash
-cat docs/temp/issues.md
-```
-
-期待する構造は次のとおりです。`game-result` は草案ID `game-page` に依存するため、登録時に実際のIssue番号への依存関係に変換されます。既存Issueへ依存する場合は `depends-on: 12` のように番号を指定できます。この番号は登録時点でOpenでなければなりません。
-
-登録スクリプトは、各Issueについて次の6見出しが各1回あることを検査します。このうち「機能の概要」「DoD（受入条件）」「DoD確認方法」には記述が必須です。残りの3項目は、今回不要なら見出しだけでも構いません。不足していればGitHubへ登録せず停止します。制約の根拠は [docs/template-constraints.md](docs/template-constraints.md) です。
-
-```text
-## 機能の概要
-## DoD（受入条件）
-## 関連ファイル・変更境界
-## 実装計画
-## DoD確認方法
-## 変更しないものとリスク
-```
-
-```md
-# Issue草案
-
-<!-- ISSUE
-id: game-page
-title: [Feature] じゃんけん画面を表示する
-assignee: student-a
-depends-on:
--->
-## 機能の概要
-
-ログイン済み利用者がじゃんけん画面を表示できる。
-今回しないこと: 勝敗計算、履歴保存。
-
-## DoD（受入条件）
-
-- Given ログイン済み、When `/game` を開く、Then 手を選ぶ画面が表示される。
-
-## 関連ファイル・変更境界
-
-- 新規: `GameController.java`、`game.html`、対応するControllerテスト。
-- `SecurityConfig.java`、DB、勝敗計算は変更しない。
-
-## 実装計画
-
-1. `GameController.java` を追加し、GET `/game` で画面を返す。
-2. `game.html` を追加し、手の選択肢を表示する。
-3. `GameControllerTest.java` を追加し、DoDを確認する。
-
-## DoD確認方法
-
-- DoD 1: MockMvcでログイン済み利用者の画面表示を確認する。
-
-## 変更しないものとリスク
-
-- `SecurityConfig.java`、DB、勝敗計算は変更しない。
-<!-- END ISSUE -->
-
-<!-- ISSUE
-id: game-result
-title: [Feature] じゃんけんの勝敗を表示する
-assignee:
-depends-on: game-page
--->
-## 機能の概要
-
-利用者が選んだ手と相手の手から勝敗を表示する。
-今回しないこと: 履歴保存。
-
-## DoD（受入条件）
-
-- Given じゃんけん画面、When グーを選んで勝負する、Then 勝敗が表示される。
-
-## 関連ファイル・変更境界
-
-## 実装計画
-
-1. `GameService.java` に勝敗判定を実装する。
-2. ServiceのJUnitテストを追加する。
-3. Controllerと画面を更新して結果を表示する。
-
-## DoDと確認方法
-
-- DoD 1: JUnitで勝ち・負け・あいこを確認する。
-
-## 変更しないものとリスク
-
-- 履歴保存とランキングは実装しない。
-<!-- END ISSUE -->
-```
-
-学生全員で、各Issueの「今回しないこと」「DoD」「変更境界」「実装計画」を確認してから登録します。
-
-### 2-2. Issueを決定的に登録する
-
-複数Issueをまとめて登録します。次を入力します。
-
-```bash
-bash scripts/issue/register-from-file.sh docs/temp/issues.md
-```
-
-`assignee:` が空欄のIssueがある場合、スクリプトは登録を始めずに担当者GitHub名を質問します。例では、次を入力します。
-
-```text
-Issue『[Feature] じゃんけんの勝敗を表示する』の担当者GitHub名を入力してください: student-b
-```
-
-次に、登録予定と既存Issueの判定結果が表示されます。
-
-```text
---- Issue登録プレビュー ---
-[新規登録] id=game-page title=[Feature] じゃんけん画面を表示する assignee=student-a depends-on=なし
-[新規登録] id=game-result title=[Feature] じゃんけんの勝敗を表示する assignee=student-b depends-on=game-page
-この内容で新規Issueを登録し、依存関係を設定しますか? [y/N]
-```
-
-内容が正しければ `y` を入力します。成功すると、実際のIssue番号と依存関係が表示されます。
-
-```text
-作成: #12 [Feature] じゃんけん画面を表示する
-作成: #13 [Feature] じゃんけんの勝敗を表示する
-依存関係を設定: #13 は #12 に依存
-完了しました。
-```
-
-同じ `docs/temp/issues.md` でスクリプトをもう一度実行しても、同一の `title` を持つIssueを検索して登録をスキップします。二重登録はされません。GitHub画面で直接起票する場合も、`Feature` Issue Formが同じ必須項目の入力を求めます。ただし既存IssueがOpenかという依存関係の検査は、必ずこの登録スクリプトを使って行います。
-
-## 3. 実行可能なIssueを選び、ブランチを作る
-
-実行可能とは、openであり、未完了の依存IssueがないIssueです。作業ツリーに未コミットの変更があると、このスクリプトは最初に停止します。変更を確認してcommitしてから、次を入力します。
-
-```bash
-bash scripts/issue/ready.sh
-```
-
-最初に、実行可能なIssue一覧が表示されます。
-
-```text
-#12  [Feature] じゃんけん画面を表示する  担当: student-a
-```
-
-`#13` が `#12` に依存していれば、`#12` がcloseされるまで `#13` は表示されません。
-
-次に、開始するIssue番号を入力します。この例では `12` を入力します。
-
-```text
-開始するIssue番号を # なしで入力してください: 12
-```
-
-現在の担当が実行者と異なる、または未割当の場合、担当を実行者へ変更してよいか質問されます。担当者を変えたくない場合は `n` を入力し、作業を中止します。
-
-```text
-Issue #12 の現在の担当: student-b
-実行者 student-a を担当者に変更しますか? [y/N] y
-```
-
-続けて、ブランチ名の末尾を入力します。英小文字・数字・ハイフンだけを使います。`game-page` と入力すると、実際のブランチ名は `feat/issue-12-game-page` になります。
-
-```text
-ブランチ名の末尾を英小文字・数字・ハイフンで入力してください（例: game-page）: game-page
-```
-
-スクリプトは、担当変更、作成するブランチ、実行予定のGitコマンドを表示します。内容を確認して `y` を入力した場合だけ実行されます。
-
-```text
---- 実行内容の確認 ---
-Issue: #12
-実行者: student-a
-担当者変更: student-b → student-a
-作成するブランチ: feat/issue-12-game-page
-実行するコマンド: git fetch origin main / git switch main / git pull --ff-only origin main / git switch -c feat/issue-12-game-page
-上記を実行しますか? [y/N] y
-```
-
-`y` の後、Issue担当を更新し、次の順で `origin/main` を最新化して新しいブランチへ切り替えます。
-
-```text
-git fetch origin main
-git switch main
-git pull --ff-only origin main
-git switch -c feat/issue-12-game-page
-```
-
-成功時は、実行した内容と現在のブランチ・commit・作業ツリーの状態が最後に表示されます。
-
-```text
---- 実施内容 ---
-Issue #12 の担当者: student-a
-実行済み: git fetch origin main
-実行済み: git switch main
-実行済み: git pull --ff-only origin main
-実行済み: git switch -c feat/issue-12-game-page
-現在のブランチ: feat/issue-12-game-page
-現在のcommit: abc1234 最新のコミットメッセージ
-作業ツリー: 0 件の未コミット変更
-```
-
-未コミット変更がある場合は、次のように停止します。この場合は勝手に削除せず、変更を確認してcommitするか、教員・統合担当に相談します。
-
-```text
-停止: 未コミットの変更があります。先に変更を確認してcommitしてください。
- M inujanken/src/main/java/...
-```
-
-## 4. Copilotに実装を依頼し、学生が確認する
-
-Copilot Chatで、`implement-issue` Skillを使うことを明示して次の依頼を入力します。Skillを使った場合、Copilotの最初の応答に `使用Skill: implement-issue` と表示されます。
-
-```text
-`implement-issue` Skillを使って、Issue #12 本文の実装計画に従って実装してください。
-
-制約:
-- DoDと関連ファイル・変更境界の範囲だけを変更する。
-- GameController、game.html、対応テストを実装する。
-- SecurityConfig.java、DB、勝敗計算は変更しない。
-- 実装後に `gradle test` を実行し、DoDごとの結果を報告する。
-- Web画面を変更したため、`gradle bootRun` によるブラウザ確認の手順も示す。
-```
-
-Copilotが変更した後、学生は必ず差分を読みます。
-
-```bash
-git status
-git diff
-```
-
-期待される `git status` の例です。
-
-```text
-On branch feat/issue-12-game-page
-Untracked files:
-  inujanken/src/main/java/inuzuki/is/inujanken/GameController.java
-  inujanken/src/main/resources/templates/game.html
-  inujanken/src/test/java/inuzuki/is/inujanken/GameControllerTest.java
-```
-
-次にテストします。
+次に、出発点のアプリが動くことを確認します。
 
 ```bash
 cd inujanken
 gradle test
 ```
 
-成功時の最後には次のように表示されます。
+`BUILD SUCCESSFUL` と表示されれば成功です。以降、次の場所でコマンドを実行します。
+
+| 行いたいこと | 実行する場所 |
+| --- | --- |
+| `git`、`gh`、`scripts/...`、`docs/...` | リポジトリのルート |
+| `gradle test`、`gradle bootRun` | `inujanken` |
+
+> [!WARNING]
+> `git status` に自分が意図していない変更がある場合は、そのまま次の作業を始めないでください。担当者に確認し、先にコミット、PR 作成、または変更の破棄について相談します。
+
+## 3. ブレインストーミング: 作りたいことを具体的にする
+
+### この工程で行うこと
+
+チームの案を出発点に、「誰が」「何をして」「誰とどう関わり」「何がうれしいか」を言葉にします。この段階では実装や Issue 分割を急ぎません。
+
+### 手順
+
+1. Copilot Chat で `/brainstorm` を選びます。
+2. 自分たちの案を、普段使う言葉で入力します。
+3. AI の質問にチームで答えます。
+4. 決まったことと未決定のことを AI に整理させます。
+5. AI に追加の要望・質問・修正点がないか尋ねられたら、必要なことを伝えます。追加があれば、再び整理してもらいます。
+6. 内容がまとまったら、ブレインストーミング結果をファイルにまとめるよう AI に指示します。
+7. 作成されたファイルの相対パスを、次の `/plan-issues` の入力に使います。
+
+入力例です。
 
 ```text
-BUILD SUCCESSFUL
+犬じゃんけんに、友達と同じ対戦ルームに入って、同じ犬と対戦する機能を追加したいです。
+参加する人には、どんな画面や操作が必要かを一緒に考えたいです。
 ```
 
-自動テストの後、実際にアプリケーションを起動して操作します。`gradle bootRun` は起動したまま待機するコマンドです。このターミナルでは別のコマンドを入力せず、ブラウザ確認が終わるまでそのままにします。
+この入力に対する AI の最初の応答例です。
+
+```text
+開発途中の相談として扱います。
+根拠: すでに /game のルーム画面、参加・開始処理、対応する
+GameRoomControllerTest が存在します。
+
+すでに分かっていること
+- 同じルームに複数人が参加し、開始状態を共有する。
+- 参加者が同じ犬と対戦する体験を追加したい。
+
+まだ分からないこと
+- 対戦が始まった後に、各参加者が何を選択・確認するのか。
+- 結果を誰にいつ表示するのか。
+
+確認したいこと
+1. 参加者は「グー・チョキ・パー」のような手を選びますか。
+2. 全員が選ぶまで、他の参加者の手を見えないようにしますか。
+3. 今回、勝敗や履歴まで扱いますか。それとも一ラウンドだけですか。
+4. 対戦の管理者は必要ですか。
+```
+
+AI から質問された後の入力例です。
+
+```text
+今回は、あらかじめ用意されたルームを選んで入れればよいです。
+ルームを新しく作る機能は次回にします。
+今決めたことと、まだ決めていないことを整理してください。
+```
+
+例えば「全員が手を選んだら結果を全員に表示する。一ラウンドだけで、管理者と履歴は今回作らない」と答えた場合、AI は次のように整理します。
+
+```text
+決まったこと
+- 対象利用者: 既存ルームに参加した利用者。
+- 中心操作: 対戦開始後に一人一つの手を選ぶ。
+- 利用者間の関わり: 全員の選択がそろった時点で、共通の結果を表示する。
+- 今回しないこと: ルーム作成、管理者機能、複数ラウンド、履歴。
+
+演習条件の確認
+- A1/A2: 現在の Spring Boot と H2 の構成を利用できる。
+- A3: 複数参加者の選択が同じ結果表示に影響するため満たす見込みがある。
+- A4: テキスト交換が主目的ではない。
+- A5/A6: 起動手順と参加者向け操作手順は、実装後に整備が必要。
+
+最小の縦切り
+開始済みのルームで各参加者が一度だけ手を選び、全員の選択後に結果を表示する。
+```
+
+このあと AI は、例えば次のように追加の相談を促します。
+
+```text
+追加したい要望、確認したいこと、修正したい点はありますか？
+内容がまとまったら、「ブレインストーミング結果をファイルにまとめてください」
+と指示してください。次に /plan-issues でそのファイルを入力として使えます。
+```
+
+チームで内容が固まったら、次のように指示します。ファイル名を指定しない場合は、AI が機能名から自動で決めます。
+
+```text
+ブレインストーミング結果をファイルにまとめてください。
+```
+
+この例では、AI は次のように報告します。
+
+```text
+docs/temp/brainstorm/round-choice.md を作成しました。
+このファイルを /plan-issues の入力として指定してください。
+```
+
+### 次へ進む前の確認
+
+- チームの全員が、作りたい機能を自分の言葉で説明できる。
+- 利用者、主な操作、利用者どうしの関わりが決まっている。
+- 今回は作らないことが決まっている。
+- Spring Boot、DB、複数ユーザーの相互作用という演習条件を満たす見込みがある。
+
+### この工程で残すもの
+
+会話の全文は残しません。合意した内容だけを `docs/temp/brainstorm/<機能名>.md` に残します。学生が名前を指定しなければ、AI は機能名から英小文字・数字・ハイフンだけのファイル名を自動で決めます。同名ファイルがあれば `-2` のような連番を付けます。利用者ロールや全体アーキテクチャなど、今後も必要なプロジェクト全体の前提だけは、AI に `docs/project.md` の変更案を出させ、学生が読んでから反映します。
+
+> [!NOTE]
+> 教員向け: `.github/prompts/brainstorm.prompt.md` は、開始時・開発途中のどちらでも使え、最初は質問を最大五つに抑えます。合意前にはファイルを作らず、学生の明示的な指示後だけ一時ブリーフを作ります。学生が AI の提案を採用したかではなく、自分たちの判断を説明できるかを確認してください。
+
+## 4. タスク分割: 機能を小さな Issue に分ける
+
+### この工程で行うこと
+
+合意した機能を、担当者が理解して並行して作業できる Issue に分けます。各 Issue は、原則として `src` 以下の変更が二、三ファイル程度に収まる大きさにします。テストファイルはこの数に含めません。
+
+### 手順
+
+1. Copilot Chat で `/plan-issues` を選びます。
+2. ブレインストーミング結果の相対パス、または作りたい機能の説明を入力します。どちらも入力しなければ、AI がどちらかを入力するよう質問します。
+3. 大きすぎる Issue、曖昧な AC、不要な依存関係がないかをチームで確認します。
+4. 合意できたら、AI に Issue の下書きを作らせます。
+5. `docs/temp/issues.md` を読み、必要な部分だけを AI と修正します。
+
+ブレインストーミングから続ける場合の入力例です。
+
+```text
+docs/temp/brainstorm/round-choice.md
+```
+
+ファイルを使わずに、直接相談を始める場合の入力例です。
+
+```text
+事前に作られた対戦ルームに参加者が入り、全員が同じ犬と一ラウンド対戦できるようにしたいです。
+この機能を、チームで分担できる Issue に分けたいです。まず分け方を相談したいです。
+```
+
+何も入力せずに `/plan-issues` を起動した場合、AI は分割を始めず、例えば次のように質問します。
+
+```text
+Issue 分割の対象が分かりません。次のどちらかを入力してください。
+1. 開発したい機能の説明
+2. docs/temp/brainstorm/round-choice.md のような、存在する
+   ブレインストーミング結果の相対パス
+```
+
+ブレインストーミング結果のファイルを指定した場合、AI は最初にその内容を短く要約します。その内容に誤りがなければ、次のように `/plan-issues` の第1段階へ進みます。まだ `docs/temp/issues.md` は作られません。
+
+| id | 題名 | 利用者価値 | 今回しないこと | 依存 | 分割理由 |
+| --- | --- | --- | --- | --- | --- |
+| `round-choice-storage` | [Feature] 対戦中の参加者の手を保存できる | 選んだ手をラウンドの結果に使える | 結果表示 | なし | DB・Mapper・Service の変更を独立させる |
+| `round-choice-screen` | [Feature] 開始済みの参加者が手を選べる | 参加者が画面から一度だけ選択できる | 勝敗計算 | `round-choice-storage` | Controller・画面・テストを担当できる |
+| `round-result` | [Feature] 全員の選択後に共通の結果を表示できる | 同じラウンド結果を参加者全員が確認できる | 履歴、次ラウンド | `round-choice-storage`, `round-choice-screen` | 結果計算と画面表示をまとめる |
+
+```text
+この分割では、各 Issue の src 以下の変更をおおむね 2〜3 ファイルに抑えます。
+確認したいこと: 同じ手を選んだ場合を引き分けとしますか。
+この Issue 分割で各 Issue の実装計画を作成しますか？
+```
+
+分け方に合意した後は、次のように入力します。
+
+```text
+この分け方で進めます。Issue の下書きを作ってください。
+```
+
+AI は `docs/temp/issues.md` を作成した後、例えば次のように報告します。
+
+```text
+Issue 草案を 3 件作成しました。
+- 依存関係: round-choice-screen → round-choice-storage,
+  round-result → round-choice-storage, round-choice-screen
+- assignee: 3 件とも未記入です。登録時に担当者を入力してください。
+- 未解決事項: 引き分け時の表示文言はチームで決めてください。
+
+構造確認の結果
+ISSUE blocks: 3
+AC headings: 3
+AC verification headings: 3
+Plan headings: 3
+Trailing whitespace: （出力なし）
+```
+
+下書きを開きます。
 
 ```bash
+less docs/temp/issues.md
+```
+
+例えば、AC が曖昧なら次のように修正を依頼します。
+
+```text
+docs/temp/issues.md の Issue game-room-join の AC 2 を、
+満室のときに参加できないことを確認できる書き方に直してください。
+ほかの Issue は変更しないでください。
+```
+
+### 次へ進む前の確認
+
+- 各 Issue に「機能の概要」「AC」「変更境界」「実装計画」「AC確認方法」がある。
+- AC を読めば、実装後に何を確認すればよいか分かる。
+- Issue ごとの担当と依存関係を決められる。
+- 一人が説明できないほど大きい Issue になっていない。
+
+### この工程で残すもの
+
+`docs/temp/issues.md` は登録前だけの下書きです。GitHub Issue に登録した後は、Issue 本文が正式な機能仕様になります。
+
+> [!NOTE]
+> 教員向け: `/plan-issues` は `AGENTS.md` と `docs/template-constraints.md` を参照します。ローカルの `docs/ref/springboot_samples` は参考専用です。変更・Git 登録・Issue の変更境界への記載はさせません。
+
+## 5. Issue を登録する
+
+### 手順
+
+下書きの内容をチームで確認してから、次を実行します。
+
+```bash
+bash scripts/issue/register-from-file.sh docs/temp/issues.md
+```
+
+スクリプトが担当者 GitHub 名を尋ねたら入力します。次に表示されるプレビューで、タイトル、担当者、依存関係を確認します。正しければ `y` を入力して登録します。
+
+エラーになったときは、表示された項目を読みます。例えば AC が不足しているなら、Copilot Chat に `issues.md` の該当 Issue だけを直すよう依頼し、もう一度同じコマンドを実行します。
+
+### スクリプトが確認すること
+
+- 必須の「機能の概要」「AC（受け入れ基準）」「AC確認方法」があるか
+- 担当者が決まっているか
+- 同じタイトルの Issue をすでに登録していないか
+- 依存先が実在する open Issue か
+- 登録前に内容を確認したか
+
+### 次へ進む前の確認
+
+- GitHub 上に Issue が作成されている。
+- Issue に担当者が設定されている。
+- 各自が自分の Issue の AC を説明できる。
+
+> [!WARNING]
+> GitHub Issue が、実装を始める時点での正式な仕様です。要求が変わった場合は、先に Issue の AC、変更境界、実装計画をチームで更新してから実装します。
+
+> [!NOTE]
+> 教員向け: スクリプトと Issue Form が必要項目、重複、依存関係をハーネスとして検査します。Web で単発 Issue を作ることもできますが、複数 Issue の登録はスクリプトを使うと確認漏れを減らせます。
+
+## 6. 実装して Pull Request を作る
+
+### 6-1. 担当 Issue のブランチを作る
+
+最初に、リポジトリのルートで次を実行します。
+
+```bash
+git status
+bash scripts/issue/ready.sh
+```
+
+`ready.sh` は、今取り組める Issue を表示します。画面の案内に従い、Issue 番号とブランチ名を入力します。担当者が異なる場合、変更してよいかも確認されます。最後に `origin/main` を取得してからブランチを作ります。
+
+> [!WARNING]
+> `ready.sh` は未コミットの変更があると停止します。別の Issue の変更が残っているときは、先にコミットまたは PR 作成を完了させてください。
+
+### 6-2. AI と実装計画を確認する
+
+Copilot Chat で `implement-issue` Skill を使います。
+
+```text
+implement-issue Skill を使って、担当する Issue #12 の実装を始めたいです。
+まず、何をどのように変更する予定か説明してください。
+```
+
+Issue #12 が「開始済みの参加者が手を選べる」である場合の、Skill の応答例です。
+
+```text
+使用Skill: implement-issue
+
+Issue #12 の要約
+- AC: 開始済みの参加者がグー・チョキ・パーから一つを選べる。
+- AC: 同じ参加者が二度目に選んでも、最初の選択を上書きしない。
+- 依存: #11（手を保存する処理）が完了していること。
+- 変更境界: GameRoomController、game-room.html、GameRoomControllerTest。
+
+既存確認
+- GameRoomController は GET /game と POST /game/start を処理している。
+- game-room.html は開始済みなら「対戦画面へ進めます」と表示する。
+
+変更予定
+1. GameRoomController に手を送信する POST 処理を追加する。
+2. game-room.html に開始済み利用者用の手の選択フォームを追加する。
+3. GameRoomControllerTest に、選択成功と二重選択を確認するテストを追加する。
+
+テスト計画
+- ログイン済み開始参加者が手を送信できることを MockMvc で確認する。
+- 二度目の送信で最初の選択が変わらないことを確認する。
+
+この範囲で実装を始めてよいですか？
+```
+
+AI の計画を読んでから、次のように質問・修正します。
+
+```text
+既存の Entity を再利用できるか調べてください。
+Issue に書かれていない Controller は変更しないでください。
+失敗する場合のテストも追加してください。
+```
+
+内容に納得したら、実装を始めるよう伝えます。AI が作ったコードは、必ず自分で差分を読みます。
+
+### 6-3. テストと動作確認をする
+
+```bash
+git diff
+cd inujanken
+gradle test
 gradle bootRun
 ```
 
-成功時には、次のようにアプリケーションが起動したことを示すログが表示されます。
+`gradle test` が成功したら、`bootRun` を起動したままブラウザを開きます。Issue の AC に対応する操作を行い、期待する画面・データの状態になることを確認します。例えば満室時の AC なら、定員まで参加した後に追加参加を試します。終了するときは、実行中の端末で `Ctrl+C` を押します。
+
+テストが失敗した、または AC を満たしていない場合は、[デバッグ](#8-デバッグする)へ進みます。
+
+### 6-4. PR 本文を作り、PR を登録する
+
+Copilot Chat に次のように入力します。
 
 ```text
-Started InujankenApplication in ... seconds
+prepare-pull-request Skill を使って、このブランチの PR 本文を作りたいです。
+必要なことを質問しながら、下書きを作ってください。
 ```
 
-ブラウザで `http://localhost:8080/game` を開きます。未ログインならログイン画面が表示されます。`yamada` と `taro` でログイン後、「じゃんけん」の見出しとグー・チョキ・パーの選択肢が表示されることを確認します。確認後、ターミナルで `Ctrl+C` を押して停止します。
-
-テストが失敗したら、すぐに「直して」とは言いません。`diagnose-failure` Skillを使うことを明示してCopilotに次のように依頼します。最初の応答に `使用Skill: diagnose-failure` と表示されます。
+この Skill は、いきなり PR を作りません。最初の応答例は次のとおりです。
 
 ```text
-`diagnose-failure` Skillを使って、このテスト失敗を診断してください。
-修正はまだしないでください。再現条件、ログから分かる事実、原因候補、最小の確認方法を示してください。
+使用Skill: prepare-pull-request
+ブランチ名から Issue #12 を確認しました。
+
+PR 本文を作るため、次を教えてください。
+1. AC ごとの確認結果（自動テスト・手動確認）
+2. gradle test の実行結果
+3. bootRun で確認した操作と結果
+4. 共通 DoD で、まだ自分だけでは確認できない項目
+5. この実装で理解した設計上の要点
+6. AI の提案で採用または採用しなかったものと理由
 ```
 
-学生が原因と修正範囲を理解してから修正を承認します。修正後は同じSkillの手順に従い、`gradle test` と、画面に影響する場合は `gradle bootRun` によるブラウザ確認を再実施します。
-
-## 5. commitし、PRを作成する
-
-テスト成功後、変更をcommitします。
+AI は `docs/temp/pr-12.md` のような下書きを作ります。AC ごとの確認結果、テストと手動確認の結果、自分が理解したことを読み、自分の言葉で補います。下書きを確認したら、リポジトリのルートに戻って実行します。
 
 ```bash
 cd ..
-git add inujanken/src/main/java/inuzuki/is/inujanken/GameController.java
-git add inujanken/src/main/resources/templates/game.html
-git add inujanken/src/test/java/inuzuki/is/inujanken/GameControllerTest.java
-git commit -m "feat: add game page"
-```
-
-成功すると、次のようにコミット数とファイル数が表示されます。
-
-```text
-[feat/issue-12-game-page abc1234] feat: add game page
- 3 files changed, ... insertions(+)
-```
-
-commit後、Copilot Chatで `prepare-pull-request` Skillを使うことを明示して依頼します。このSkillは現在のブランチ名からIssue番号を読み取り、Issue本文、実装計画、差分、commit、テスト結果を確認します。最初の応答に `使用Skill: prepare-pull-request` と表示されます。
-
-```text
-`prepare-pull-request` Skillを使って、PR本文を準備してください。
-```
-
-Skillは不足している情報をまとめて質問します。学生は実行結果を自分で確認して回答します。
-
-```text
-- DoDごとの確認結果は何ですか?
-- `gradle test` の最終結果は何ですか?
-- `gradle bootRun` 後、ブラウザで何を確認しましたか?
-- 今回、Controller・Template・Testはそれぞれ何を担当しますか?
-- AIの提案で採用しなかったものと、その理由は何ですか?
-```
-
-回答後、SkillはPR本文を `docs/temp/pr-12.md` に自動作成します。`docs/temp/` はGitへ登録されません。本文には、関連Issue、変更内容、確認するDoD、テストと確認内容、自分の理解とAI利用が含まれます。作成スクリプトは、次の5見出しが各1回あることを確認します。そのうち「関連Issue」「変更内容」「確認するDoD」には記述が必須で、残りの2項目は空欄でも構いません。関連Issueには実在するIssue番号を `#12` の形で記載します。`Closes #12` はOpen Issueだけに使え、完了済みIssueを参照する場合は `Refs #12` と書きます。
-
-```text
-## 関連Issue
-## 変更内容
-## 確認するDoD
-## テストと確認内容
-## 自分の理解とAI利用
-```
-
-学生は、作成結果を確認します。
-
-```bash
-cat docs/temp/pr-12.md
-```
-
-確認後、引数なしでPR登録スクリプトを実行します。
-
-```bash
 bash scripts/pr/create.sh
 ```
 
-スクリプトは、現在のブランチ名からIssue番号の候補を表示し、関連Issue番号、PR題名、PR本文ファイルを対話的に収集します。Enterだけを押すと、Issue番号はブランチ名から、題名はIssueの題名から、本文は `docs/temp/pr-12.md` から設定されます。
+画面の質問に答え、表示されたプレビューを確認してから PR を作成します。PR 本文が正式な記録です。
+
+### 次へ進む前の確認
+
+- コードとテストの差分を自分で説明できる。
+- `gradle test` が成功している。
+- Web UI を変更した場合は `gradle bootRun` で AC を確認した。
+- PR 本文に関連 Issue、変更内容、AC確認結果、DoD確認がある。
+
+> [!NOTE]
+> 教員向け: `AGENTS.md`、Copilot instructions、Java/Test instructions、`implement-issue` Skill が、計画提示、学生の承認、範囲外変更の説明、確認結果の記録を求めるハーネスです。AI の作業ログを Markdown として残す必要はありません。
+
+## 7. レビューしてマージする
+
+レビューは、実装した本人以外が行います。「コードに問題がなさそうか」だけではなく、「Issue の AC を満たすか」を確認します。
+
+### 手順
+
+1. Copilot Chat で `review-issue` Skill を使います。
+2. レビューする PR を選びます。
+3. Issue の AC、PR 本文、差分、テスト、CI を確認します。
+4. 必要ならアプリを起動して AC を実際に試します。
+5. 結果を PR のレビューとして登録します。
+
+入力例です。
 
 ```text
-関連Issue番号を入力してください [12]:
-PR題名を入力してください [[Feature] じゃんけん画面を表示する]:
-PR本文ファイルを入力してください [docs/temp/pr-12.md]:
---- 作成するPR ---
-ブランチ: feat/issue-12-game-page
-関連Issue: #12
-題名: [Feature] じゃんけん画面を表示する
-本文ファイル: docs/temp/pr-12.md
-（PR本文が表示される）
-この内容でpushしてPull Requestを作成しますか? [y/N]
+review-issue Skill を使って、レビューできる PR の一覧を見せてください。
+選んだ PR を、どのように確認すればよいか案内してください。
 ```
 
-内容が正しければ `y` を入力します。スクリプトはその後にだけ、pushとPR作成を実行します。GitHubの画面から直接作成・編集されたPRも、`Validate pull request body` が同じ形式を検査します。リポジトリ管理者は、このチェックを `main` へのマージ必須条件に設定します。
+PR #25（Issue #12 を閉じる PR）を選んだ場合のレビュー観点の例です。
 
 ```text
-git push -u origin feat/issue-12-game-page
-gh pr create --base main --head feat/issue-12-game-page ...
+レビュー対象: PR #25 / Issue #12
+
+AC と確認箇所
+- 「一つ選べる」: POST 処理、画面の 3 ボタン、選択成功テストを確認する。
+- 「二度目に上書きしない」: Service または Mapper の更新条件と二重送信テストを確認する。
+
+共通 DoD の確認
+- PR 本文に AC確認結果、DoD確認、gradle test の結果があるか。
+- CI が成功しているか。
+- UI 変更なので bootRun の手動確認結果があるか。
+
+著者への質問
+二重送信を画面操作で防ぐだけでなく、POST を直接二度送った場合も最初の選択が守られる理由を説明してください。
 ```
 
-成功するとPRのURLが表示されます。別の学生がIssueのDoD、差分、テストを確認し、レビューします。CI成功、レビュー承認、DoD確認がそろったら `main` へマージします。
-
-## 6. 火曜の振り返りと教員ヒアリング
-
-火曜13:30に、対象期間のマージ済みPRを集計します。例として2026年9月1日から9月7日を集計する場合は次を入力します。
+GitHub CLI でも確認できます。
 
 ```bash
-bash scripts/report/weekly-summary.sh 2026-09-01 2026-09-07
+gh pr list
+gh pr view 12
+gh pr diff 12
+gh pr checks 12
 ```
 
-出力は、Google Slidesへ貼り付けるMarkdown表です。
+レビュー中に気付いたことは、根拠とともに書きます。
 
-```md
-| PR | 担当者 | マージ日時 | 関連Issue |
-| --- | --- | --- | --- |
-| [34 じゃんけん画面を表示する](...) | student-a | 2026-09-03T... | #12 |
+```text
+AC 2 の「満室なら参加できない」を確認しましたが、満室時の画面を操作した証拠が見つかりません。
+どのように確認したかを PR 本文に追記してください。
 ```
 
-各学生は、この表を根拠にして、Slidesへ次を記載します。
+AI に分類を頼む場合は、次のように入力します。
 
-1. 自分のIssue・PRと実装内容
-2. 自分が説明できる設計・テストの要点
-3. AIの提案を採用・不採用にした理由
-4. 次週に改善するプロンプト、Skill、作業手順
+```text
+このレビュー指摘を、必ず直すこと・質問したいこと・任意の改善に分けてください。
+それぞれの理由も説明してください。
+```
 
-教員ヒアリングでは、作者本人がIssue、PR、テスト、画面デモを示しながら説明します。確認するのは「動いたか」だけではありません。なぜその設計にしたか、どのテストがDoDを保証するか、AIのどの提案を採用しなかったかを説明できることが目標です。
+### マージする前の確認
 
-## 文書を追加してよい場合
+- Issue のすべての AC に対して、確認結果がある。
+- PR 本文の必須項目が埋まっている。
+- CI が成功している。
+- 著者以外の学生がレビューし、承認している。
+- `docs/project.md` の共通 DoD を満たしている。
 
-- 認証方式やDB方式など、将来の実装にも影響する決定をした: `docs/adr/`
-- 同じ原因の障害が2回以上起きた: `docs/troubleshooting.md`
+> [!WARNING]
+> 「AI が問題ないと言った」ことは承認の根拠になりません。レビュー担当者が差分と必要な動作を確認し、根拠を PR に残してください。
 
-それ以外はIssue、PR、テストに残します。これにより、実装と文書の乖離を防ぎます。
+> [!NOTE]
+> 教員向け: PR テンプレート、PR 本文検査 Action、CI、`review-issue` Skill がレビューのハーネスです。学生が AC と差分の対応を説明できるかを中心に確認します。
+
+## 8. デバッグする
+
+テスト失敗や期待と異なる動作が出たら、すぐに「直して」と依頼しません。再現できる事実と原因の予想を分けます。
+
+### 手順
+
+1. 実行したコマンド、期待した結果、実際の結果、エラー全文を用意します。
+2. Copilot Chat で `diagnose-failure` Skill を使い、修正前に原因候補を調べます。
+3. 原因候補を確認する手順を実行します。
+4. 修正方針に納得してから、最小限の修正と回帰テストを依頼します。
+5. テストと影響する AC の動作確認をやり直します。
+
+最初の依頼例です。
+
+```text
+diagnose-failure Skill を使ってください。まだ修正はしないでください。
+Issue #12 の AC は「満室なら追加参加できない」です。
+gradle test で次の失敗が出ました: （エラー全文を貼る）
+期待結果、実際の結果、再現手順、原因候補、候補を区別する確認方法を整理してください。
+```
+
+例えば、二重選択を許してしまうテストが失敗した場合の応答例です。
+
+```text
+使用Skill: diagnose-failure
+
+期待結果: 同じ参加者が二度送信しても、最初の手を上書きしない。
+実際の結果: 二度目の送信後、保存された手が二度目の値になった。
+再現手順: 開始済みの alice が「グー」を送信後、「チョキ」を送信する。
+
+原因候補
+1. UPDATE 文に「まだ手を選んでいない」という条件がない。
+2. Service が既存の選択を確認せず、常に Mapper を呼んでいる。
+
+区別する確認
+- Mapper の UPDATE 条件と更新件数を確認する。
+- Service が更新件数 0 のときにどのような結果を返すか確認する。
+
+まだコードは変更しません。どちらを先に確認しますか？
+```
+
+原因と修正方針に納得した後の依頼例です。
+
+```text
+候補 2 を確認し、原因は参加人数の判定が保存前の値を使っていることだと分かりました。
+Issue #12 の変更境界内で最小の修正案と、同じ失敗を防ぐ回帰テストを示してください。
+```
+
+### 終了前の確認
+
+- 失敗を再現できた、または再現できない理由を説明できる。
+- 修正の理由を説明できる。
+- 同じ失敗を防ぐ回帰テストがある。
+- `gradle test` と影響する AC の確認をやり直した。
+
+### この工程で残すもの
+
+残すのは修正コード、回帰テスト、修正 PR です。一度きりのログや会話は残しません。同じ失敗を複数人が繰り返すなど、今後も役立つ内容だけを `docs/troubleshooting.md` に短く追記します。
+
+> [!WARNING]
+> 単なる不具合を隠すために AC を書き換えてはいけません。要件そのものが変わったときだけ、Issue の AC を更新します。
+
+> [!NOTE]
+> 教員向け: `diagnose-failure` Skill は、再現できる事実と推測を分け、修正前に学生の確認を求めます。「AI が直した」で終わらず、再現・仮説比較・回帰テストを説明できるか確認してください。
+
+## 9. 毎週の振り返り
+
+進捗の根拠は GitHub Issue と PR です。授業前に、担当した Issue、作成・レビューした PR、AC の確認結果、失敗と改善を振り返ります。
+
+```bash
+bash scripts/report/weekly-summary.sh
+```
+
+出力をもとに、Google Slide またはチームで決めた GitHub Wiki／振り返り用ブランチへ、次を整理します。
+
+- 今週実装した内容と対応する Issue・PR
+- デモで見せる操作と結果
+- 自分が理解できたこと、まだ説明できないこと
+- AI の使い方、Skill、プロンプト、ハーネスで次週に改善すること
+
+> [!NOTE]
+> 教員向け: AI に要約を頼む場合も、Issue・PR・テスト結果を根拠として渡します。学生の振り返りは、各自の言葉で書かせてください。
+
+## 10. 困ったときの早見表
+
+| 困ったこと | 最初に行うこと |
+| --- | --- |
+| 何を作るかが曖昧 | Copilot Chat で `/brainstorm` |
+| 機能をどう分けるか迷う | Copilot Chat で `/plan-issues` |
+| Issue を GitHub に登録したい | `bash scripts/issue/register-from-file.sh docs/temp/issues.md` |
+| 次に着手できる Issue を知りたい | `bash scripts/issue/ready.sh` |
+| 実装の進め方を確認したい | `implement-issue` Skill |
+| PR 本文を作りたい | `prepare-pull-request` Skill → `bash scripts/pr/create.sh` |
+| レビューしたい | `review-issue` Skill、`gh pr list` |
+| テストが失敗した | `diagnose-failure` Skill |
+
+迷ったら、AI に次の三つを質問してください。
+
+1. この Issue の AC は何ですか。
+2. この変更で確認する必要があることは何ですか。
+3. 今回、GitHub に根拠として残すべきものは何ですか。
