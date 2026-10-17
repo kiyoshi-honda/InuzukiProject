@@ -75,9 +75,9 @@ for index in "${!IDS[@]}"; do
     }
     NUMBER_BY_ID[$dependency_id]="$dependency_id"
   done
-  while [[ -z "${ASSIGNEES[$index]}" ]]; do
-    read -r -p "Issue『${TITLES[$index]}』の担当者GitHub名を入力してください: " ASSIGNEES[$index]
-  done
+  [[ -n "${ASSIGNEES[$index]}" ]] || {
+    echo "エラー: ${IDS[$index]} の担当者（assignee）が未記入です。草案を修正して再実行してください。" >&2; exit 1;
+  }
 done
 
 EXISTING="$(gh issue list --state all --limit 1000 --json number,title --jq '.[] | [.number, .title] | @tsv')"
@@ -87,18 +87,14 @@ for index in "${!IDS[@]}"; do
     [[ "$title" == "${TITLES[$index]}" ]] && { found_number="$number"; break; }
   done <<< "$EXISTING"
   if [[ -n "$found_number" ]]; then
-    ACTIONS[$index]="既存のため登録しない"; NUMBERS[$index]="$found_number"; NUMBER_BY_ID[${IDS[$index]}]="$found_number"
+    echo "エラー: タイトルが重複するIssueが既にあります: #${found_number} ${TITLES[$index]}。草案を修正して再実行してください。" >&2
+    exit 1
   else
     ACTIONS[$index]="新規登録"; NUMBERS[$index]=""
   fi
 done
 
-echo "--- Issue登録プレビュー ---"
-for index in "${!IDS[@]}"; do
-  echo "[${ACTIONS[$index]}] id=${IDS[$index]} title=${TITLES[$index]} assignee=${ASSIGNEES[$index]} depends-on=${DEPENDS[$index]:-なし}"
-done
-read -r -p "この内容で新規Issueを登録し、依存関係を設定しますか? [y/N] " ANSWER
-[[ "$ANSWER" == "y" || "$ANSWER" == "Y" ]] || { echo "中止しました。"; exit 0; }
+echo "検査に成功しました。Issueを登録します。"
 
 for index in "${!IDS[@]}"; do
   [[ "${ACTIONS[$index]}" == "新規登録" ]] || continue
@@ -121,4 +117,4 @@ for index in "${!IDS[@]}"; do
   done
 done
 
-echo "完了しました。"
+echo "完了しました。次は bash scripts/issue/ready.sh を実行して、着手できるIssueを確認してください。"

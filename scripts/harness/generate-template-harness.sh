@@ -85,13 +85,12 @@ issue_description() {
     'AC（受け入れ基準）') printf 'Given / When / Then形式で、観測・テスト可能な受け入れ基準を記述する。' ;;
     '関連ファイル・変更境界') printf '変更予定のファイルと、変更してはいけない範囲を記述する。' ;;
     '実装計画') printf '変更予定ファイルと実装順序を記述する。' ;;
-    'AC確認方法') printf '各ACを、JUnit、MockMvc、画面操作などでどう確認するか記述する。' ;;
     '変更しないものとリスク') printf '変更範囲に含めないものと、注意すべきリスクを記述する。' ;;
   esac
 }
 
 {
-  printf '%s\n' 'name: 機能' 'description: 1人が短いPRで実装する利用者価値' 'title: "[Feature] "' 'body:'
+  printf '%s\n' 'name: 新機能' 'description: 1人が短いPRで実装する利用者価値' 'title: "[Feature] "' 'body:'
   index=0
   for heading in "${ISSUE_HEADING_ARRAY[@]}"; do
     index=$((index + 1))
