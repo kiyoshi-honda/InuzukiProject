@@ -58,7 +58,7 @@
       <button type="submit">開始</button>
     </form>
     <p th:if="${gameRoom.currentUserStarted and gameRoom.waiting}">あなたは開始済みです。他の参加者を待っています。</p>
-    <p th:if="${gameRoom.started}">対戦画面へ進めます。</p>
+    <p th:if="${gameRoom.started}"><a href="/game/round">対戦画面へ進む</a></p>
   </main>
 </body>
 
