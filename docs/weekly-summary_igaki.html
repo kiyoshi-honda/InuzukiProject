@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>週次開発一覧 @igaki</title><style>body{font-family:system-ui,sans-serif;max-width:1200px;margin:2rem auto;padding:0 1rem}button{margin:.25rem;padding:.4rem .7rem}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #bbb;padding:.5rem;vertical-align:top;text-align:left}.markdown{max-width:42rem}.markdown pre{white-space:pre-wrap;background:#f6f8fa;padding:.5rem}.markdown code{background:#f6f8fa}.selected{font-weight:bold}</style>
+</head><body><h1>週次開発一覧: @igaki</h1><p>記録日時を選ぶと、その時点で収集した情報を表示します。削除後は保存ダイアログでこのHTMLを同じ場所・名前で上書きしてください。次回実行時、その記録の開始時刻から再収集します。</p><div id="history"></div><main id="content"></main>
+
+<!-- WEEKLY-SUMMARY-ENTRY id="20261017T032219Z" data-start="1970-01-01T00:00:00Z" data-end="2026-10-17T03:22:19Z" -->
+<template class="weekly-entry" data-id="20261017T032219Z" data-start="1970-01-01T00:00:00Z" data-end="2026-10-17T03:22:19Z">
+<section><h2>記録日時: 2026-10-17 12:22 JST</h2><p>対象期間: 1970-01-01 09:00 JST から 2026-10-17 12:22 JST。PR作者: <code>@igaki</code></p>
+<h3>完了Issue（Issueを直接CloseしたPR）</h3><table><thead><tr><th>PR</th><th>Issue</th><th>開始</th><th>終了</th><th>所要時間</th></tr></thead><tbody>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/13">#13 [Feature] 事前作成された対戦ルームに最大10人で参加できる</a><div class="markdown"><pre class="markdown-source">## 関連Issue
+
+Closes #6
+
+## 変更内容
+
+- 事前作成された対戦ルームをH2に登録した。
+- MyBatisのMapperを使い、ルーム情報と参加者情報を保存・取得できるようにした。
+- 1ルームの参加者を最大10人に制限した。
+- 同じ利用者の重複参加を防止した。
+- 参加者ごとの入室状態と開始状態を保存できるようにした。
+- 参加者全員が開始ボタンを押した場合、10人未満でもルームを対戦開始状態へ切り替えるようにした。
+- 対戦ルーム画面に犬キャラクター、参加者一覧、各参加者の開始状態、ルーム状態、開始ボタンを表示した。
+- Spring Securityのログインユーザーに `kodai/taro` と `oit/hanako` を追加した。既存の `yamada/taro` も維持している。
+- SQL初期化の文字コードをUTF-8に設定し、開始フォームにCSRFトークンを追加した。
+
+## 確認するDoD
+
+- DoD 1: 確認済み。ログイン済み利用者が `/game` を開くと、事前作成ルームに参加した状態が表示される。
+- DoD 2: 確認済み。参加者が9人以下の場合、新しい利用者が参加者として登録される。
+- DoD 3: 手動確認は未確認。自動テストで10人参加済みのルームへの11人目の参加が拒否されることを確認している。
+- DoD 4: 確認済み。参加者一覧と犬キャラクターが対戦画面に表示される。
+- DoD 5: 確認済み。開始ボタンを押した参加者だけが開始済みとなり、他の参加者が未開始の場合は開始待ちになる。
+- DoD 6: 確認済み。参加者全員が開始ボタンを押すと、10人未満でもルームが対戦開始状態になる。
+- DoD 7: 確認済み。全員が開始するまでルームは開始待ちのままで、手の入力画面へ遷移しない。
+
+## テストと確認内容
+
+- `./gradlew test`: 成功。
+- `GameRoomControllerTest`: 参加、満員、開始待ち、全員開始、CSRFトークン表示、複数ユーザー設定を確認済み。
+- `UserDetailsService`から `yamada`、`kodai`、`oit` を読み込めることを確認済み。
+- `gradle bootRun`: 起動成功。
+- 手動確認済み: `/game` の表示、参加者の開始操作、全員開始までの開始待ち。
+- 手動未確認: 10人参加済みルームへの11人目の参加拒否。
+
+## 自分の理解とAI利用
+
+ルーム参加者の情報をH2に保存し、参加者全員の入室状態と開始状態を切り替えられるようにした。参加者全員の開始状態を確認して、ルームの状態を切り替える設計である。
+
+AIから提案された利用者によるルーム作成は、最初から実装すると操作や管理が煩雑になるため採用せず、事前作成ルームに限定した。また、10人集まらなくてもゲームを開始できるように変更した。</pre></div></td><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/6">#6 [Feature] 事前作成された対戦ルームに最大10人で参加できる</a><br>担当: igaki<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+あらかじめ用意された対戦ルームに、ログイン済み利用者が参加できる。1つのルームには最大10人まで参加でき、参加者全員が同じ犬キャラクターとの対戦画面を利用する。参加者全員が開始ボタンを押した時点で、満員でなくても対戦を開始できる。
+今回しないこと: 利用者によるルーム作成・削除、ルーム検索、複数ルームの管理、リアルタイム通信。
+
+## DoD（受入条件）
+
+- Given ログイン済み利用者、When 対戦画面を開く、Then 事前作成された対戦ルームに参加した状態が表示される。
+- Given ルームの参加者が9人以下、When 新しい利用者が参加する、Then 参加者として登録される。
+- Given ルームの参加者が10人、When 新しい利用者が参加しようとする、Then 満員であることが表示され参加できない。
+- Given 複数の参加者、When 対戦画面を表示する、Then 全員に同じルームの参加者一覧と犬キャラクターが表示される。
+- Given 参加者が2人以上で開始ボタンを押していない利用者がいる、When 参加者の一人が開始ボタンを押す、Then その利用者の開始状態だけが保存され、対戦は開始されない。
+- Given 参加者全員が開始ボタンを押す、When 開始状態を確認する、Then 参加者が10人未満でもルームが対戦開始状態になる。
+- Given 参加者全員が開始ボタンを押していない、When ルーム状態を確認する、Then ルームは参加待ちまたは開始待ちのままで、手の入力画面に遷移しない。
+
+## 関連ファイル・変更境界
+
+- 変更候補: `inujanken/src/main/java/inuzuki/is/inujanken/SecurityConfig.java`（複数の検証用ログインユーザーが必要な場合に限る）。
+- 新規候補: `inujanken/src/main/java/inuzuki/is/inujanken/room/` 配下のルームController、サービス、Mapper、モデル。
+- 新規候補: `inujanken/src/main/resources/schema.sql`、`inujanken/src/main/resources/data.sql`（事前作成ルームと参加者データ、参加者ごとの開始状態）。
+- 新規候補: `inujanken/src/main/resources/templates/game-room.html`。
+- 新規候補: `inujanken/src/test/java/inuzuki/is/inujanken/room/` 配下のController・サービス・Mapperテスト。
+- 既存の静的トップページの公開設定は変更しない。
+
+## 実装計画
+
+1. 事前作成ルーム、参加者、ルーム状態を表すDB構造と初期データを定義する。
+2. ログインユーザーを参加者として登録し、同じユーザーの重複参加を防ぐ。
+3. 参加者数が10人を超えないサービス処理を追加する。
+4. 参加者ごとの開始状態を保存し、全員が開始した場合だけルームを対戦開始状態へ遷移させる。
+5. 対戦画面に犬キャラクター、参加者一覧、開始状態、開始ボタン、現在のルーム状態を表示する。
+6. MockMvcとDBを使い、参加・満員・重複参加・全員開始・開始待ちを確認する。
+
+## DoD確認方法
+
+- DoD 1: MockMvcで認証済み利用者が事前作成ルームを表示できることを確認する。
+- DoD 2: サービスまたはMapperテストで9人以下の参加と参加者登録を確認する。
+- DoD 3: サービステストで10人目までの参加成功と11人目の拒否を確認する。
+- DoD 4: MockMvcまたはThymeleafテストで参加者一覧と犬キャラクターの表示を確認する。
+- DoD 5: サービステストで一部の参加者だけが開始した場合に対戦開始しないことを確認する。
+- DoD 6: サービステストで参加者全員が開始した場合、10人未満でも対戦開始状態になることを確認する。
+- DoD 7: MockMvcテストで開始状態と開始ボタンの表示を確認する。
+
+## 変更しないものとリスク
+
+- 利用者によるルーム作成・削除は変更しない。
+- 満員になることは開始条件にせず、参加者全員の開始操作を開始条件とする。
+- 認証方式をDBユーザー管理へ変更するかは、既存の認証方針とテスト用ユーザー数の確認が必要である。
+- 同時参加処理の厳密な排他制御は、初期版ではサービスとDB制約で検証し、負荷試験は行わない。</pre></div></td><td>2026-09-04 14:08 JST</td><td>2026-09-04 14:23 JST</td><td>15分</td></tr>
+</tbody></table><h3>IssueをCloseしていない完了PR</h3><table><thead><tr><th>PR</th><th>説明</th><th>開始</th><th>終了</th><th>所要時間</th></tr></thead><tbody>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/19">#19 update</a></td><td><div class="markdown"><pre class="markdown-source">## 関連Issue
+
+## 変更内容
+
+## 確認するDoD
+
+## テストと確認内容
+
+## 自分の理解とAI利用</pre></div></td><td>2026-10-14 10:03 JST</td><td>2026-10-14 10:05 JST</td><td>1分</td></tr>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/12">#12 update create.sh about issue number</a></td><td><div class="markdown"><pre class="markdown-source">## 関連Issue
+
+## 変更内容
+
+## 確認するDoD
+
+## テストと確認内容
+
+## 自分の理解とAI利用</pre></div></td><td>2026-09-04 14:20 JST</td><td>2026-09-04 14:21 JST</td><td>0分</td></tr>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/11">#11 issue検索アルゴリズム修正</a></td><td><div class="markdown"><pre class="markdown-source">## 関連Issue
+
+## 変更内容
+
+## 確認するDoD
+
+## テストと確認内容
+
+## 自分の理解とAI利用</pre></div></td><td>2026-09-04 12:03 JST</td><td>2026-09-04 12:04 JST</td><td>0分</td></tr>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/10">#10 update plan-issues</a></td><td><div class="markdown"><pre class="markdown-source">## 関連Issue
+
+## 変更内容
+
+## 確認するDoD
+
+## テストと確認内容
+
+## 自分の理解とAI利用</pre></div></td><td>2026-09-04 11:15 JST</td><td>2026-09-04 11:15 JST</td><td>0分</td></tr>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/5">#5 feature label削除</a></td><td><div class="markdown"><pre class="markdown-source">## 関連Issue
+
+## 変更内容
+
+## 確認するDoD
+
+## テストと確認内容
+
+## 自分の理解とAI利用</pre></div></td><td>2026-09-04 10:57 JST</td><td>2026-09-04 10:58 JST</td><td>1分</td></tr>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/4">#4 update pr sample</a></td><td><div class="markdown"><pre class="markdown-source">## 関連Issue
+
+## 変更内容
+
+## 確認するDoD
+
+## テストと確認内容
+
+## 自分の理解とAI利用</pre></div></td><td>2026-09-04 10:15 JST</td><td>2026-09-04 10:17 JST</td><td>1分</td></tr>
+<tr><td><a href="https://github.com/kiyoshi-honda/InuzukiProject/pull/3">#3 Toadr</a></td><td><div class="markdown"><pre class="markdown-source">Issueベース開発に移行</pre></div></td><td>2026-09-01 16:57 JST</td><td>2026-09-04 09:59 JST</td><td>2日17時間1分</td></tr>
+</tbody></table><h3>自分の未完了PR</h3><ul>
+</ul><h3>未完了Issue（作成者・担当者を問わず）</h3><ul>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/20">#20 シンプルなワークフローを考える</a>（作成: 2026-10-14 10:06 JST、作成者: igaki、担当: 未設定）<div class="markdown"><pre class="markdown-source">スクリプト等の複雑なインタラクションを排除し，アラートを出す程度に留める</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/18">#18 T3. 認証処理を実装する</a>（作成: 2026-10-07 21:52 JST、作成者: igaki、担当: 未設定）<div class="markdown"><pre class="markdown-source">- まず `build.gradle`のdependencies(依存するライブラリ)をよく見て，3つのsecurityライブラリが追加されていることを確認しましょう．
+  - なお，T2で正しくInitializrを利用したプロジェクトの作成ができていれば確認するだけでOKです．
+- 認証処理を実装しましょう．ここでは任意のユーザIDとパスワードのユーザを2名分追加しましょう．このときユーザのロールも何でもよいので2種類用意すること．
+  - passwordはbcryptでハッシュ化されたものを利用すること
+  - ID/pass は何でも構わない
+  - **ヒント**：認証処理には`userDetailsService()`メソッドが必要です
+
+- 編集するファイル
+  - securityパッケージを作成し，Sample3AuthConfiguration.javaを作成し，実装すること
+
+- [ AC1 ]
+  - When: 確認者がhttp://localhost:8080/にアクセスし，ログインフォームに登録済みのユーザID（例：user1）とパスワードを入力してログインする
+  - Then: index.htmlの内容が表示される
+- [ AC2 ]（ソースコードの確認）
+  - When: 確認者がSample3AuthConfiguration.javaの，ユーザのパスワードを設定している箇所を開く
+  - Then: パスワードがそのままの文字列ではなく，bcryptでハッシュ化された値で書かれている</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/17">#17 [Feature] ラウンドの入力待ちと結果表示を画面で確認できる</a>（作成: 2026-09-16 19:49 JST、作成者: igaki、担当: igaki）<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+ラウンドの入力、入力待ち、結果表示を画面から一連の操作として利用できる。
+今回しないこと: WebSocket、SSE、途中退出、制限時間、画面の大幅なデザイン変更。
+
+## DoD（受入条件）
+
+- Given 対戦中の参加者、When ラウンド画面を開く、Then グー・チョキ・パーを選択できる。
+- Given 一部の参加者だけが入力済み、When 結果を確認する、Then 入力待ち状態が表示される。
+- Given 全参加者が入力済み、When 結果を確認する、Then 犬の共通の手と自分の勝敗が表示される。
+- Given 結果が確定したラウンド、When 画面を再読み込みする、Then 同じ犬の手と勝敗が表示される。
+- Given 未認証の利用者、When ラウンド画面を開く、Then 既存の認証処理によりログイン画面へ遷移する。
+
+## 関連ファイル・変更境界
+
+- `GameRoundController.java` に入力待ち・結果表示の画面遷移を追加する。
+- `game-round.html` に入力フォームと入力待ち表示を追加する。
+- `game-result.html` に犬の手、参加者の手、勝敗を追加する。
+- MockMvcテストは `inujanken/src/test/java/inuzuki/is/inujanken/game/` 配下に追加する。
+
+## 実装計画
+
+1. ラウンド画面から手を送信し、結果確認へ遷移できるようにする。
+2. 未完了時は結果を隠して入力待ち状態を表示する。
+3. 完了時は犬の手と本人の勝敗を表示する。
+4. 再読み込み時に保存済みの結果を表示する。
+5. 認証済み・未認証の画面遷移を確認する。
+
+## DoD確認方法
+
+- MockMvcで入力画面、入力待ち画面、結果画面を確認する。
+- 複数ユーザーの入力をFixtureに設定し、共通の犬の手が表示されることを確認する。
+- 結果確定後の再読み込みで表示内容が変わらないことを確認する。
+- 未認証アクセスが既存のログイン画面へ遷移することを確認する。
+
+## 変更しないものとリスク
+
+- 既存のルーム参加画面と参加者一覧の仕様は変更しない。
+- 結果は全員の入力後に画面更新して取得する。
+- Issue #8の予測ボーン機能は実装しない。</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/16">#16 [Feature] 全員の入力後に共通の犬の手と勝敗を確定する</a>（作成: 2026-09-16 19:49 JST、作成者: igaki、担当: igaki）<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+同じラウンドの全参加者が手を入力した場合だけ、犬の手をランダムに1つ決定して保存し、参加者ごとの勝敗を表示できる。
+今回しないこと: 犬の複雑なAI、参加者ごとに異なる犬の手、リアルタイム通信、複数種類の対戦ルール。
+
+## DoD（受入条件）
+
+- Given 未入力の参加者がいるラウンド、When 結果を確認する、Then 犬の手と勝敗は表示されず入力待ちになる。
+- Given 全参加者が入力済みのラウンド、When 結果を確認する、Then 犬の手がグー・チョキ・パーから1つ選ばれて保存される。
+- Given 犬の手が決定済みのラウンド、When 結果を再確認する、Then 犬の手が変更されない。
+- Given 全参加者が入力済みのラウンド、When 結果を表示する、Then 各参加者の手と犬の手に基づく勝敗が表示される。
+- Given 同じラウンドの複数参加者、When 結果を確認する、Then 全員に同じ犬の手が表示される。
+
+## 関連ファイル・変更境界
+
+- `GameRoundService.java` に全員入力判定、犬の手の決定、勝敗結果の確定処理を追加する。
+- `GameRoundMapper.java` に犬の手とラウンド状態の更新処理を追加する。
+- `game-result.html` に入力待ちと結果表示を追加する。
+- 乱数を差し替え可能にし、Serviceテストで決定結果を固定できるようにする。
+
+## 実装計画
+
+1. ラウンド参加者全員の入力完了を判定する。
+2. 未完了の場合は犬の手を決定せず、入力待ち状態を返す。
+3. 完了時に犬の手を一度だけ選び、ラウンドへ保存する。
+4. 保存された犬の手と参加者の手から各自の勝敗を計算する。
+5. 結果表示後の再読み込みでは保存済みの結果を返す。
+
+## DoD確認方法
+
+- 未入力者がいる状態で、犬の手と結果が未確定であることをServiceテストで確認する。
+- 固定した乱数を使い、候補から選ばれた犬の手が保存されることを確認する。
+- 同じラウンドを複数ユーザーで取得し、犬の手が一致することを確認する。
+- 結果確定後の再読み込みで犬の手が変わらないことを確認する。
+
+## 変更しないものとリスク
+
+- 犬の手の決定は参加者全員で共通とする。
+- 予測ボーンなどのアイテム効果は追加しない。
+- 同時アクセス時の高度な排他制御は対象外とし、初期版ではトランザクションとDB保存で検証する。</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/15">#15 [Feature] 対戦参加者がラウンドの手を入力できる</a>（作成: 2026-09-16 19:49 JST、作成者: igaki、担当: igaki）<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+対戦開始済みのルーム参加者が、グー・チョキ・パーのいずれかを選択してラウンドへ入力できる。
+今回しないこと: 全員入力後の犬の手の決定、勝敗結果の表示、リアルタイム通信。
+
+## DoD（受入条件）
+
+- Given 対戦開始済みの参加者、When ラウンド画面を開く、Then グー・チョキ・パーの入力肢が表示される。
+- Given 対戦開始済みの参加者、When 有効な手を送信する、Then 自分の手がラウンドに保存される。
+- Given 手を送信済みの参加者、When ラウンド画面を再表示する、Then 自分が入力済みであることが表示される。
+- Given 対戦ルームに参加していない利用者、When 手の送信を要求する、Then 入力は保存されない。
+- Given 無効な手、When 手の送信を要求する、Then 入力は拒否される。
+
+## 関連ファイル・変更境界
+
+- `GameRoundController.java` にラウンド表示と手の送信エンドポイントを追加する。
+- `GameRoundService.java` にログインユーザーと参加者の照合、手の入力処理を追加する。
+- `game-round.html` に手の選択フォームと入力済み状態を追加する。
+- Controller・Serviceテストは `inujanken/src/test/java/inuzuki/is/inujanken/game/` 配下に追加する。
+
+## 実装計画
+
+1. 対戦開始済みの参加者がラウンドを表示できる処理を追加する。
+2. グー・チョキ・パーだけを受け付ける送信処理を追加する。
+3. 認証済みユーザー本人の入力だけを保存する。
+4. 入力済み状態をラウンド画面に表示する。
+
+## DoD確認方法
+
+- MockMvcで入力画面の表示と手の送信を確認する。
+- DBテストで送信者本人の手だけが保存されることを確認する。
+- 未参加者と不正な手の送信が拒否されることを確認する。
+
+## 変更しないものとリスク
+
+- 全員の入力完了判定と犬の手の決定は後続Issueで実装する。
+- 入力途中の勝敗結果は表示しない。
+- 同じ参加者による再送信時の扱いは、最新の入力で更新する。</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/14">#14 [Feature] じゃんけんラウンドのデータと勝敗判定を定義する</a>（作成: 2026-09-16 19:49 JST、作成者: igaki、担当: igaki）<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+対戦ルームの1ラウンド、参加者の手、犬の手、勝敗、ラウンド状態を保存できるようにし、グー・チョキ・パーの勝敗判定を定義する。
+今回しないこと: 画面表示、HTTPリクエスト処理、犬の手のランダム決定、複数ラウンドの進行。
+
+## DoD（受入条件）
+
+- Given 対戦ルーム、When ラウンドを作成する、Then ラウンドが入力待ち状態で保存される。
+- Given ラウンド参加者、When グー・チョキ・パーを保存する、Then 参加者ごとの入力がラウンドに紐づいて保存される。
+- Given 参加者の手と犬の手、When 勝敗を判定する、Then 勝ち・負け・引き分けのいずれかが返る。
+- Given 同じラウンドのデータ、When ラウンドを取得する、Then 参加者の入力とラウンド状態を取得できる。
+
+## 関連ファイル・変更境界
+
+- `schema.sql` にラウンドと参加者の手を保存するテーブルを追加する。
+- `GameRoundMapper.java` にラウンド、入力、犬の手、状態の取得・保存処理を追加する。
+- `GameRoundService.java` に勝敗判定とラウンドデータの基本操作を追加する。
+- テストは `inujanken/src/test/java/inuzuki/is/inujanken/game/` 配下に追加する。
+
+## 実装計画
+
+1. ルームと参加者に紐づくラウンドおよび選択手のテーブルを定義する。
+2. ラウンドと参加者の手を取得・保存するMapper処理を追加する。
+3. グー・チョキ・パーの全組み合わせと引き分けを判定する。
+4. ラウンド作成、入力保存、状態取得のサービス処理を追加する。
+
+## DoD確認方法
+
+- DBテストでラウンドと参加者の手が正しく保存・取得できることを確認する。
+- 勝敗判定の単体テストで全9通りの組み合わせを確認する。
+- ラウンド状態が入力待ちとして保存されることを確認する。
+
+## 変更しないものとリスク
+
+- 既存のルーム参加・開始判定は変更しない。
+- 犬の手のランダム決定と結果表示は後続Issueで実装する。
+- 通信切断、途中退出、制限時間は対象外とする。</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/9">#9 [Feature] 自分の対戦結果と予測ボーン獲得履歴を確認できる</a>（作成: 2026-09-04 10:59 JST、作成者: igaki、担当: igaki）<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+ログイン済み利用者が、自分の過去の対戦結果と予測ボーンの獲得・使用履歴を確認できる。対戦結果にはラウンド、犬の手、自分の手、勝敗、日時を表示する。
+今回しないこと: 全体ランキング、他の参加者の詳細な個人履歴、統計グラフ、CSV出力。
+
+## DoD（受入条件）
+
+- Given 過去の対戦結果がある利用者、When 履歴画面を開く、Then 自分の対戦結果が新しい順に表示される。
+- Given 対戦結果、When 履歴を表示する、Then 犬の手、自分の手、勝敗、日時が表示される。
+- Given 予測ボーンを獲得または使用した利用者、When アイテム履歴を表示する、Then 獲得と使用の記録が表示される。
+- Given 他の利用者の履歴、When 履歴画面を開く、Then 他の利用者の個人履歴は表示されない。
+
+## 関連ファイル・変更境界
+
+- 新規候補: `inujanken/src/main/java/inuzuki/is/inujanken/history/` 配下の履歴Controller、サービス、Mapper、モデル。
+- 新規候補: `inujanken/src/main/resources/templates/game-history.html`。
+- 変更候補: `inujanken/src/main/resources/schema.sql`（必要なインデックス）。
+- 新規候補: `inujanken/src/test/java/inuzuki/is/inujanken/history/` 配下のController・Mapperテスト。
+- ラウンドの勝敗判定やアイテム効果の仕様は変更しない。
+
+## 実装計画
+
+1. 認証済み利用者を条件に、対戦結果とアイテム履歴を検索するMapperを追加する。
+2. 利用者本人のデータだけを返すサービスとControllerを追加する。
+3. 新しい対戦から順に表示する履歴画面を追加する。
+4. 履歴が空の場合の表示を追加する。
+5. 他の利用者IDを指定しても本人以外の履歴を取得できないことをテストする。
+
+## DoD確認方法
+
+- DoD 1: 履歴MapperテストとMockMvcテストで本人の履歴の降順表示を確認する。
+- DoD 2: テンプレートまたはMockMvcテストで必要な4項目の表示を確認する。
+- DoD 3: アイテム使用記録のFixtureを使った履歴テストで獲得・使用表示を確認する。
+- DoD 4: 別ユーザーのログイン状態でMockMvcテストを行い、個人履歴が混在しないことを確認する。
+
+## 変更しないものとリスク
+
+- ランキングや全参加者の成績比較は後続機能とする。
+- 保存済みの対戦結果を削除・編集する機能は追加しない。
+- 履歴の件数が増えた場合のページングは後続Issueで検討する。</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/8">#8 [Feature] 勝利報酬の予測ボーンを本人だけが使用できる</a>（作成: 2026-09-04 10:59 JST、作成者: igaki、担当: igaki）<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+ラウンドに勝利した参加者へ予測ボーンを1個付与する。予測ボーンを所持している本人だけが使用でき、使用者の画面上で犬の次の手の候補から1つを除外表示する。使用した予測ボーンはそのラウンドで消費する。
+今回しないこと: ヒントアイテム、他の種類のアイテム、他の参加者の画面への候補変更、犬が選ぶ手の確率変更。
+
+## DoD（受入条件）
+
+- Given ラウンドに勝利した参加者、When 次のラウンドへ進む、Then 予測ボーンが1個付与される。
+- Given 予測ボーンを所持する参加者、When 予測ボーンを使用する、Then 使用者の画面だけで犬の次の手の候補が1つ除外表示される。
+- Given 予測ボーンを所持しない参加者、When 予測ボーンの使用を要求する、Then 使用できず、所持数も変化しない。
+- Given 予測ボーンを使用した参加者、When 同じラウンドで再度使用する、Then 使用できず、予測ボーンが再付与されない。
+- Given 予測ボーンを使用した参加者、When 次のラウンドを開始する、Then 使用済みの予測ボーンが消費されている。
+
+## 関連ファイル・変更境界
+
+- 新規候補: `inujanken/src/main/java/inuzuki/is/inujanken/item/` 配下のアイテムController、サービス、Mapper、モデル。
+- 変更候補: `inujanken/src/main/java/inuzuki/is/inujanken/game/` 配下のラウンド完了処理と対戦画面表示。
+- 変更候補: `inujanken/src/main/resources/schema.sql`（アイテム所持・使用記録）。
+- 変更候補: `inujanken/src/main/resources/templates/game-round.html`（所持数と使用操作）。
+- 新規候補: `inujanken/src/test/java/inuzuki/is/inujanken/item/` 配下の権限・消費・報酬テスト。
+
+## 実装計画
+
+1. 利用者ごとのアイテム所持数とラウンドごとの使用記録を保存する。
+2. ラウンド勝利時に予測ボーンを付与する処理を追加する。
+3. 認証済み利用者の所持アイテムだけを対象に使用権限を検証する。
+4. 使用時に本人の予測状態へ候補除外を記録し、同じラウンドで再使用できないようにする。
+5. 対戦画面に予測ボーンの所持数、使用状態、本人だけの候補表示を追加する。
+
+## DoD確認方法
+
+- DoD 1: ラウンド完了後のサービス・DBテストで勝者への1個付与を確認する。
+- DoD 2: アイテムサービスと画面テストで使用者だけの候補表示を確認する。
+- DoD 3: 別ユーザーの所持数で使用要求を行うサービステストで拒否を確認する。
+- DoD 4: 同一ラウンドの二重使用テストで拒否と所持数不変を確認する。
+- DoD 5: DBの使用記録と次ラウンド表示を確認する。
+
+## 変更しないものとリスク
+
+- 予測ボーンによって犬の共通の手や乱数の確率は変更しない。
+- アイテム効果は使用者本人の表示と予測判断だけに適用する。
+- ヒントを全参加者へ共有する機能は後続Issueで追加する。</pre></div></li>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/7">#7 [Feature] 参加者全員が共通の犬と1ラウンド対戦できる</a>（作成: 2026-09-04 10:59 JST、作成者: igaki、担当: igaki）<div class="markdown"><pre class="markdown-source">## 機能の概要
+
+同じ対戦ルームの参加者が、それぞれグー・チョキ・パーを入力する。全員の入力が完了した後、犬が候補からランダムに1つの手を選び、全参加者に共通の犬の手と各自の勝敗を表示する。
+今回しないこと: リアルタイム通信、入力途中の結果表示、犬の複雑なAI、複数種類の対戦ルール。
+
+## DoD（受入条件）
+
+- Given 対戦中の参加者、When グー・チョキ・パーのいずれかを入力する、Then 自分の入力済み状態が保存される。
+- Given 参加者の一部だけが入力済み、When 結果を確認する、Then 結果は表示されず入力待ち状態が表示される。
+- Given 全参加者が入力済み、When 結果を確認する、Then 犬がグー・チョキ・パーからランダムに選んだ共通の手が表示される。
+- Given 全参加者が入力済み、When 結果が表示される、Then 各参加者の手と犬の共通の手に基づく勝敗が表示される。
+- Given 同じラウンドの参加者、When 結果を確認する、Then 全員に同じ犬の手が表示される。
+
+## 関連ファイル・変更境界
+
+- 新規候補: `inujanken/src/main/java/inuzuki/is/inujanken/game/` 配下のラウンドController、サービス、勝敗判定、Mapper、モデル。
+- 新規候補: `inujanken/src/main/resources/templates/game-round.html`、`inujanken/src/main/resources/templates/game-result.html`。
+- 変更候補: `inujanken/src/main/resources/schema.sql`、`inujanken/src/main/resources/data.sql`（ラウンドと選択手の保存）。
+- 新規候補: `inujanken/src/test/java/inuzuki/is/inujanken/game/` 配下のController・サービス・勝敗判定テスト。
+- WebSocketやSSE用の設定ファイルは追加しない。
+
+## 実装計画
+
+1. ラウンド、参加者の選択手、犬の手、勝敗、ラウンド状態を保存するモデルとMapperを追加する。
+2. グー・チョキ・パーの勝敗判定をサービスから分離し、引き分けを含む結果を定義する。
+3. 全参加者の入力完了を判定し、完了後だけ犬の手を一度決定して保存する。
+4. 犬の手を候補からランダムに選び、保存済みの同じ値を全参加者へ表示する。
+5. 入力待ち、結果表示、再読み込み時の同一結果表示をテストする。
+
+## DoD確認方法
+
+- DoD 1: MockMvcとDBテストで手の入力と保存を確認する。
+- DoD 2: 未入力者がいる状態のサービスまたはControllerテストで結果非表示を確認する。
+- DoD 3: 乱数の注入またはテスト用乱数を使い、候補から1手が選ばれ保存されることを確認する。
+- DoD 4: 勝敗判定の単体テストで全組み合わせと引き分けを確認する。
+- DoD 5: 同一ラウンドを複数ユーザーで取得し、犬の手が一致することを確認する。
+
+## 変更しないものとリスク
+
+- 初期版は全員の入力後に画面更新して結果を取得する。
+- 将来のリアルタイム通信導入時に、状態遷移と同時入力処理を見直す可能性がある。
+- 通信切断、途中退出、制限時間は初期版の対象外とする。</pre></div></li>
+</ul><h3>期間内のコミット</h3><p>10件</p><h3>期間内のGitHubコメント</h3><ul>
+<li><a href="https://github.com/kiyoshi-honda/InuzukiProject/issues/6#issuecomment-5535329254">2026-09-04 12:41 JST</a><div class="markdown"><pre class="markdown-source">## 追加の開発内容
+
+複数の参加者で開始待ちを検証できるよう、既存のインメモリ認証ユーザーに次のユーザーを追加する。
+
+- `kodai` / `taro`
+- `oit` / `hanako`
+
+既存の `yamada` / `taro` は維持する。3ユーザーはいずれも `USER` ロールとし、Issue #6 の事前作成ルームへ参加できる。
+
+## 追加の確認方法
+
+- 3ユーザーがUserDetailsServiceから読み込めることを自動テストで確認する。
+- 別ブラウザまたはシークレットウィンドウで `kodai/taro` と `oit/hanako` にログインし、`/game` の同じルームへ参加する。
+- 各ユーザーが「開始」を押すと開始済み表示になり、全員が押すまで「開始待ち」が維持されることを確認する。</pre></div></li>
+</ul></section></template>
+<!-- /WEEKLY-SUMMARY-ENTRY -->
+<script>
+const entries=()=>[...document.querySelectorAll('template.weekly-entry')];
+const historyElement=document.querySelector('#history'), contentElement=document.querySelector('#content');
+function render(id){const t=entries().find(x=>x.dataset.id===id);if(!t)return;contentElement.replaceChildren(t.content.cloneNode(true));document.querySelectorAll('#history button[data-id]').forEach(b=>b.classList.toggle('selected',b.dataset.id===id));}
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function inlineMarkdown(s){return escapeHtml(s).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\[([^\]]+)\]\((https?:[^ )]+)\)/g,'<a href="$2">$1</a>')}
+function markdownToHtml(text){const lines=text.replace(/\r\n/g,'\n').replace(/\n/g,'\n').split('\n');let out='',list='';const close=()=>{if(list){out+='</'+list+'>';list=''}};for(const line of lines){let m;if((m=line.match(/^(#{1,6})\s+(.+)$/))){close();out+='<h'+m[1].length+'>'+inlineMarkdown(m[2])+'</h'+m[1].length+'>'}else if((m=line.match(/^[-*]\s+(.+)$/))){if(list!=='ul'){close();list='ul';out+='<ul>'}out+='<li>'+inlineMarkdown(m[1])+'</li>'}else if((m=line.match(/^\d+\.\s+(.+)$/))){if(list!=='ol'){close();list='ol';out+='<ol>'}out+='<li>'+inlineMarkdown(m[1])+'</li>'}else if(!line.trim()){close()}else{close();out+='<p>'+inlineMarkdown(line)+'</p>'}}close();return out}
+function renderMarkdown(){document.querySelectorAll('.markdown-source').forEach(source=>{const rendered=document.createElement('div');rendered.className='markdown-rendered';rendered.innerHTML=markdownToHtml(source.textContent);source.replaceWith(rendered)})}
+function redraw(){historyElement.replaceChildren();entries().forEach(t=>{const b=document.createElement('button');b.dataset.id=t.dataset.id;b.textContent=t.dataset.end.replace('T',' ').replace('Z',' UTC');b.onclick=()=>{render(t.dataset.id);renderMarkdown()};historyElement.append(b)});const d=document.createElement('button');d.textContent='表示中の記録を削除して保存';d.onclick=removeCurrent;historyElement.append(d);if(entries().length){render(entries().at(-1).dataset.id);renderMarkdown()}}
+async function removeCurrent(){const b=document.querySelector('#history .selected');if(!b)return;const t=entries().find(x=>x.dataset.id===b.dataset.id);if(!confirm('この記録を削除しますか？'))return;const old=document.querySelector('meta[name="weekly-summary-recollect-from"]');const floor=[old?.content,t.dataset.start].filter(Boolean).sort()[0];old?.remove();const m=document.createElement('meta');m.name='weekly-summary-recollect-from';m.content=floor;document.head.append(m);t.previousSibling?.remove();t.nextSibling?.remove();t.remove();try{const h=await window.showSaveFilePicker({suggestedName:location.pathname.split('/').pop()||'weekly-summary.html',types:[{description:'HTML',accept:{'text/html':['.html']}}]});const w=await h.createWritable();await w.write('<!doctype html>\n'+document.documentElement.outerHTML);await w.close();alert('削除後のHTMLを保存しました。');location.reload()}catch(e){alert('保存されていません。同じファイル名で保存ダイアログを完了してください。')}redraw()}
+redraw();
+</script></body></html>

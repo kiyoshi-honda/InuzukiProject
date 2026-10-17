@@ -29,13 +29,6 @@ body:
   - type: textarea
     id: field-5
     attributes:
-      label: AC確認方法
-      description: 各ACを、JUnit、MockMvc、画面操作などでどう確認するか記述する。
-    validations:
-      required: true
-  - type: textarea
-    id: field-6
-    attributes:
       label: 変更しないものとリスク
       description: 変更範囲に含めないものと、注意すべきリスクを記述する。
   - type: input

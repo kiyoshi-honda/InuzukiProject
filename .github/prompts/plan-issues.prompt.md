@@ -37,8 +37,7 @@ description: "合意した機能案を、登録可能な複数Issueの草案へ�
 
 1. 変更予定ファイルと変更理由
 2. 実装順序
-3. AC確認方法（ACごとの自動テストまたは手動確認）
-4. 変更しないものとリスク
+3. 変更しないものとリスク
 
 `docs/temp/` がなければ作成し、下記形式の完全な内容を `docs/temp/issues.md` に作成または上書きする。作成後は、Issue数、依存関係、assigneeが未記入のIssue、計画上の未解決事項を短く報告する。
 
@@ -57,7 +56,6 @@ description: "合意した機能案を、登録可能な複数Issueの草案へ�
 cd "$(git rev-parse --show-toplevel)"
 printf 'ISSUE blocks: '; grep -c '^<!-- ISSUE$' docs/temp/issues.md || true
 printf 'AC headings: '; grep -c '^## AC（受け入れ基準）$' docs/temp/issues.md || true
-printf 'AC verification headings: '; grep -c '^## AC確認方法$' docs/temp/issues.md || true
 printf 'Plan headings: '; grep -c '^## 実装計画$' docs/temp/issues.md || true
 printf 'Start conditions:\n'; grep -n -E '全員が開始ボタン|開始状態' docs/temp/issues.md || true
 printf 'Trailing whitespace:\n'; grep -n -E '[[:blank:]]$' docs/temp/issues.md || true
@@ -94,11 +92,6 @@ depends-on:
 2. `game.html` を追加し、手の選択肢を表示する。
 3. `GameControllerTest.java` を追加し、ログイン済みと未ログインのACを確認する。
 
-## AC確認方法
-
-- AC 1: MockMvcでログイン済み利用者の画面表示を確認する。
-- AC 2: MockMvcで未ログイン利用者のログイン画面遷移を確認する。
-
 ## 変更しないものとリスク
 
 - `SecurityConfig.java` の認証方針は変更しない。
@@ -106,5 +99,7 @@ depends-on:
 ```
 
 開発内容またはブレインストーミング結果の相対パス:
+
+作成後は、学生に `bash scripts/issue/register-from-file.sh docs/temp/issues.md` を実行すること、そのスクリプトは不足・重複・依存関係の問題があれば登録せず停止することを案内して終了する。
 
 ${input:featureOrBrainstormFile:開発したい機能を説明するか、docs/temp/brainstorm/ 内のMarkdownファイルの相対パスを入力する。}

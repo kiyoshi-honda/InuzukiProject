@@ -41,8 +41,8 @@
 | タスク分割 | `/plan-issues`、テンプレート制約 | GitHub Issue にする前の `docs/temp/issues.md` は下書き |
 | Issue 登録 | Issue Form、登録スクリプト | GitHub Issue |
 | 実装 | `AGENTS.md`、Copilot instructions、`implement-issue` Skill | コード、テスト、コミット、PR |
-| レビュー | PR テンプレート、CI、`review-issue` Skill | PR 本文、コメント、承認、CI 結果 |
-| デバッグ | `diagnose-failure` Skill、テスト、ログ | 回帰テスト、修正 PR |
+| レビュー | PR テンプレート、CI、`review-pr` Skill | PR 本文、コメント、承認、CI 結果 |
+| デバッグ | `debug` Skill、テスト、ログ | 回帰テスト、修正 PR |
 
 `docs/temp/` のファイルは、AI と相談するための下書きであり Git に登録しません。最終的な根拠は Issue、PR、コード、テスト、レビューに残します。
 
@@ -286,7 +286,7 @@ docs/temp/issues.md の Issue game-room-join の AC 2 を、
 
 ### 次へ進む前の確認
 
-- 各 Issue に「機能の概要」「AC」「変更境界」「実装計画」「AC確認方法」がある。
+- 各 Issue に「機能の概要」「AC」があり、任意項目の変更境界・実装計画・リスクも必要に応じて記載されている。
 - AC を読めば、実装後に何を確認すればよいか分かる。
 - Issue ごとの担当と依存関係を決められる。
 - 一人が説明できないほど大きい Issue になっていない。
@@ -308,17 +308,16 @@ docs/temp/issues.md の Issue game-room-join の AC 2 を、
 bash scripts/issue/register-from-file.sh docs/temp/issues.md
 ```
 
-スクリプトが担当者 GitHub 名を尋ねたら入力します。次に表示されるプレビューで、タイトル、担当者、依存関係を確認します。正しければ `y` を入力して登録します。
-
-エラーになったときは、表示された項目を読みます。例えば AC が不足しているなら、Copilot Chat に `issues.md` の該当 Issue だけを直すよう依頼し、もう一度同じコマンドを実行します。
+スクリプトは質問をせず、草案を検査して問題がなければ登録します。警告が出た場合は、Copilot Chat に `issues.md` の該当箇所だけを直すよう依頼し、同じコマンドを再実行します。
 
 ### スクリプトが確認すること
 
-- 必須の「機能の概要」「AC（受け入れ基準）」「AC確認方法」があるか
+- 必須の「機能の概要」「AC（受け入れ基準）」があるか
 - 担当者が決まっているか
 - 同じタイトルの Issue をすでに登録していないか
 - 依存先が実在する open Issue か
-- 登録前に内容を確認したか
+
+登録後は、担当するIssueに着手できるかを `bash scripts/issue/ready.sh` で確認します。
 
 ### 次へ進む前の確認
 
@@ -412,40 +411,34 @@ gradle bootRun
 Copilot Chat に次のように入力します。
 
 ```text
-prepare-pull-request Skill を使って、このブランチの PR 本文を作りたいです。
+prepare-pr Skill を使って、このブランチの PR 本文を作りたいです。
 必要なことを質問しながら、下書きを作ってください。
 ```
 
 この Skill は、いきなり PR を作りません。最初の応答例は次のとおりです。
 
 ```text
-使用Skill: prepare-pull-request
+使用Skill: prepare-pr
 ブランチ名から Issue #12 を確認しました。
 
-PR 本文を作るため、次を教えてください。
-1. AC ごとの確認結果（自動テスト・手動確認）
-2. gradle test の実行結果
-3. bootRun で確認した操作と結果
-4. 共通 DoD で、まだ自分だけでは確認できない項目
-5. この実装で理解した設計上の要点
-6. AI の提案で採用または採用しなかったものと理由
+最初に、何を実装したかと、実装上で苦労した点を教えてください。
 ```
 
-AI は `docs/temp/pr-12.md` のような下書きを作ります。AC ごとの確認結果、テストと手動確認の結果、自分が理解したことを読み、自分の言葉で補います。下書きを確認したら、リポジトリのルートに戻って実行します。
+AI は次にAC一覧を示してACごとの確認結果を聞き、最後に `gradle test` の結果を聞きます。すべての回答後、`docs/temp/pr-12.md` のような下書きを作ります。下書きを確認したら、リポジトリのルートに戻って実行します。
 
 ```bash
 cd ..
-bash scripts/pr/create.sh
+bash scripts/pr/create-pr.sh
 ```
 
-画面の質問に答え、表示されたプレビューを確認してから PR を作成します。PR 本文が正式な記録です。
+スクリプトは質問せず、本文・ブランチ・Issueを検査して問題がなければ push と PR 作成を行います。問題があれば警告を読み、下書きまたは作業状態を直して再実行します。作成後は `review-pr` Skill でレビューを始めます。
 
 ### 次へ進む前の確認
 
 - コードとテストの差分を自分で説明できる。
 - `gradle test` が成功している。
 - Web UI を変更した場合は `gradle bootRun` で AC を確認した。
-- PR 本文に関連 Issue、変更内容、AC確認結果、DoD確認がある。
+- PR 本文に関連 Issue、変更内容、AC確認結果、テスト結果がある。
 
 > [!NOTE]
 > 教員向け: `AGENTS.md`、Copilot instructions、Java/Test instructions、`implement-issue` Skill が、計画提示、学生の承認、範囲外変更の説明、確認結果の記録を求めるハーネスです。AI の作業ログを Markdown として残す必要はありません。
@@ -456,17 +449,15 @@ bash scripts/pr/create.sh
 
 ### 手順
 
-1. Copilot Chat で `review-issue` Skill を使います。
-2. レビューする PR を選びます。
-3. Issue の AC、PR 本文、差分、テスト、CI を確認します。
-4. 必要ならアプリを起動して AC を実際に試します。
-5. 結果を PR のレビューとして登録します。
+1. Copilot Chat で `review-pr` Skill を実行します。
+2. 表示された Open PR から対象を選びます。
+3. Issue の AC、PR 本文、差分、テスト、CI を順に確認します。
+4. AI が整理したコメント案を確認し、投稿するかを選びます。
 
 入力例です。
 
 ```text
-review-issue Skill を使って、レビューできる PR の一覧を見せてください。
-選んだ PR を、どのように確認すればよいか案内してください。
+review-pr Skill を使ってください。
 ```
 
 PR #25（Issue #12 を閉じる PR）を選んだ場合のレビュー観点の例です。
@@ -478,13 +469,8 @@ AC と確認箇所
 - 「一つ選べる」: POST 処理、画面の 3 ボタン、選択成功テストを確認する。
 - 「二度目に上書きしない」: Service または Mapper の更新条件と二重送信テストを確認する。
 
-共通 DoD の確認
-- PR 本文に AC確認結果、DoD確認、gradle test の結果があるか。
-- CI が成功しているか。
-- UI 変更なので bootRun の手動確認結果があるか。
-
-著者への質問
-二重送信を画面操作で防ぐだけでなく、POST を直接二度送った場合も最初の選択が守られる理由を説明してください。
+テストとCI
+- PR本文の AC確認結果とテスト結果、CIがACに対応しているかを順に確認する。
 ```
 
 GitHub CLI でも確認できます。
@@ -503,12 +489,7 @@ AC 2 の「満室なら参加できない」を確認しましたが、満室時
 どのように確認したかを PR 本文に追記してください。
 ```
 
-AI に分類を頼む場合は、次のように入力します。
-
-```text
-このレビュー指摘を、必ず直すこと・質問したいこと・任意の改善に分けてください。
-それぞれの理由も説明してください。
-```
+AI は確認結果から「必須」「質問」「提案」を整理してコメント案を示します。`この内容をPR #25にコメントとして投稿しますか？投稿しない、あるいはコメントを変更する場合は各自でPRを開いてコメントをしましょう。` と確認された場合だけ投稿を依頼します。
 
 ### マージする前の確認
 
@@ -516,13 +497,12 @@ AI に分類を頼む場合は、次のように入力します。
 - PR 本文の必須項目が埋まっている。
 - CI が成功している。
 - 著者以外の学生がレビューし、承認している。
-- `docs/project.md` の共通 DoD を満たしている。
 
 > [!WARNING]
 > 「AI が問題ないと言った」ことは承認の根拠になりません。レビュー担当者が差分と必要な動作を確認し、根拠を PR に残してください。
 
 > [!NOTE]
-> 教員向け: PR テンプレート、PR 本文検査 Action、CI、`review-issue` Skill がレビューのハーネスです。学生が AC と差分の対応を説明できるかを中心に確認します。
+> 教員向け: PR テンプレート、PR 本文検査 Action、CI、`review-pr` Skill がレビューのハーネスです。学生が AC と差分の対応を説明できるかを中心に確認します。
 
 ## 8. デバッグする
 
@@ -531,7 +511,7 @@ AI に分類を頼む場合は、次のように入力します。
 ### 手順
 
 1. 実行したコマンド、期待した結果、実際の結果、エラー全文を用意します。
-2. Copilot Chat で `diagnose-failure` Skill を使い、修正前に原因候補を調べます。
+2. Copilot Chat で `debug` Skill を使い、修正前に原因候補を調べます。
 3. 原因候補を確認する手順を実行します。
 4. 修正方針に納得してから、最小限の修正と回帰テストを依頼します。
 5. テストと影響する AC の動作確認をやり直します。
@@ -539,7 +519,7 @@ AI に分類を頼む場合は、次のように入力します。
 最初の依頼例です。
 
 ```text
-diagnose-failure Skill を使ってください。まだ修正はしないでください。
+debug Skill を使ってください。まだ修正はしないでください。
 Issue #12 の AC は「満室なら追加参加できない」です。
 gradle test で次の失敗が出ました: （エラー全文を貼る）
 期待結果、実際の結果、再現手順、原因候補、候補を区別する確認方法を整理してください。
@@ -548,7 +528,7 @@ gradle test で次の失敗が出ました: （エラー全文を貼る）
 例えば、二重選択を許してしまうテストが失敗した場合の応答例です。
 
 ```text
-使用Skill: diagnose-failure
+使用Skill: debug
 
 期待結果: 同じ参加者が二度送信しても、最初の手を上書きしない。
 実際の結果: 二度目の送信後、保存された手が二度目の値になった。
@@ -581,13 +561,13 @@ Issue #12 の変更境界内で最小の修正案と、同じ失敗を防ぐ回�
 
 ### この工程で残すもの
 
-残すのは修正コード、回帰テスト、修正 PR です。一度きりのログや会話は残しません。同じ失敗を複数人が繰り返すなど、今後も役立つ内容だけを `docs/troubleshooting.md` に短く追記します。
+残すのは修正コード、回帰テスト、修正 PR です。終了時にAIが記録を残すか尋ねます。残す場合だけ、`docs/troubleshooting-YYYYMMDD-HHMM.md` に個別記録を作ります。
 
 > [!WARNING]
 > 単なる不具合を隠すために AC を書き換えてはいけません。要件そのものが変わったときだけ、Issue の AC を更新します。
 
 > [!NOTE]
-> 教員向け: `diagnose-failure` Skill は、再現できる事実と推測を分け、修正前に学生の確認を求めます。「AI が直した」で終わらず、再現・仮説比較・回帰テストを説明できるか確認してください。
+> 教員向け: `debug` Skill は、再現できる事実と推測を分け、修正前に学生の確認を求めます。「AI が直した」で終わらず、再現・仮説比較・回帰テストを説明できるか確認してください。
 
 ## 9. 毎週の振り返り
 
@@ -597,7 +577,7 @@ Issue #12 の変更境界内で最小の修正案と、同じ失敗を防ぐ回�
 bash scripts/report/weekly-summary.sh
 ```
 
-出力をもとに、Google Slide またはチームで決めた GitHub Wiki／振り返り用ブランチへ、次を整理します。
+実行者ごとに `docs/weekly-summary_<GitHubユーザー名>.html` が作成・更新されます。ブラウザで開き、記録日時のボタンで表示を切り替えます。削除したい記録は「表示中の記録を削除して保存」を押し、同じファイル名で保存してください。次回の実行では削除した記録の開始時刻から再収集します。HTMLはGit管理対象です。
 
 - 今週実装した内容と対応する Issue・PR
 - デモで見せる操作と結果
@@ -616,9 +596,9 @@ bash scripts/report/weekly-summary.sh
 | Issue を GitHub に登録したい | `bash scripts/issue/register-from-file.sh docs/temp/issues.md` |
 | 次に着手できる Issue を知りたい | `bash scripts/issue/ready.sh` |
 | 実装の進め方を確認したい | `implement-issue` Skill |
-| PR 本文を作りたい | `prepare-pull-request` Skill → `bash scripts/pr/create.sh` |
-| レビューしたい | `review-issue` Skill、`gh pr list` |
-| テストが失敗した | `diagnose-failure` Skill |
+| PR 本文を作りたい | `prepare-pr` Skill → `bash scripts/pr/create-pr.sh` |
+| レビューしたい | `review-pr` Skill |
+| テストが失敗した | `debug` Skill |
 
 迷ったら、AI に次の三つを質問してください。
 
