@@ -19,6 +19,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Sql(statements = {
+  "DELETE FROM game_round_participant",
+  "DELETE FROM game_round",
     "DELETE FROM game_participant",
     "UPDATE game_room SET status = 'WAITING' WHERE id = 1"
 })
