@@ -90,7 +90,7 @@ issue_description() {
 }
 
 {
-  printf '%s\n' 'name: 機能' 'description: 1人が短いPRで実装する利用者価値' 'title: "[Feature] "' 'body:'
+  printf '%s\n' 'name: 新機能' 'description: 1人が短いPRで実装する利用者価値' 'title: "[Feature] "' 'body:'
   index=0
   for heading in "${ISSUE_HEADING_ARRAY[@]}"; do
     index=$((index + 1))
